@@ -11,23 +11,30 @@ import MusicController from '../components/MusicController';
 import AnswerRevealModal from '../components/AnswerRevealModal';
 import CertificateGenerator from '../components/CertificateGenerator';
 
-// Dynamically import confetti to avoid SSR issues
-let confetti = null;
-if (typeof window !== 'undefined') {
-  import('canvas-confetti').then(module => {
-    confetti = module.default;
-  }).catch(error => {
-    console.warn('Failed to load confetti:', error);
-  });
-}
-
 const PlayerInterface = () => {
   const { sessionId } = useParams();
   const navigate = useNavigate();
   const {
-    currentStage, totalStages, timeRemaining, hintsUsed, hintsAvailable, progress, isCompleted, 
-    advanceStage, updateProgress, endGame, theme, difficulty, teamName, sessionId: gameSessionId, 
-    completionTime, goToPreviousStage, goToNextStage, loadTeamBySessionId, isLoading, error
+    currentStage,
+    totalStages,
+    timeRemaining,
+    hintsUsed,
+    hintsAvailable,
+    progress,
+    isCompleted,
+    advanceStage,
+    updateProgress,
+    endGame,
+    theme,
+    difficulty,
+    teamName,
+    sessionId: gameSessionId,
+    completionTime,
+    goToPreviousStage,
+    goToNextStage,
+    loadTeamBySessionId,
+    isLoading,
+    error
   } = useGame();
   const { announceToScreenReader } = useAccessibility();
 
@@ -49,44 +56,10 @@ const PlayerInterface = () => {
     }
   }, [sessionId, loadTeamBySessionId]);
 
-  // Celebration effect
+  // Celebration effect - CSS-only celebration
   useEffect(() => {
-    if (isCompleted && !showCelebration && confetti) {
+    if (isCompleted && !showCelebration) {
       setShowCelebration(true);
-      
-      // Multi-burst confetti celebration
-      const duration = 3000;
-      const animationEnd = Date.now() + duration;
-      const randomInRange = (min, max) => Math.random() * (max - min) + min;
-
-      const interval = setInterval(() => {
-        const timeLeft = animationEnd - Date.now();
-        if (timeLeft <= 0) {
-          clearInterval(interval);
-          return;
-        }
-
-        const particleCount = 50 * (timeLeft / duration);
-        
-        // Left side burst
-        confetti({
-          particleCount,
-          startVelocity: 30,
-          spread: 70,
-          origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 },
-          colors: ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444']
-        });
-        
-        // Right side burst
-        confetti({
-          particleCount,
-          startVelocity: 30,
-          spread: 70,
-          origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 },
-          colors: ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444']
-        });
-      }, 250);
-
       announceToScreenReader(`🎉 CONGRATULATIONS ${teamName}! You have successfully completed ${getThemeInfo().title}! Your certificate is ready for download!`);
     }
   }, [isCompleted, showCelebration, announceToScreenReader, teamName]);
@@ -97,7 +70,6 @@ const PlayerInterface = () => {
       setCanAdvance(true);
       return;
     }
-    
     const previousStageSolved = stagesSolved.includes(currentStage - 1);
     setCanAdvance(previousStageSolved);
   }, [currentStage, stagesSolved]);
@@ -149,7 +121,6 @@ const PlayerInterface = () => {
     if (solvedStages.includes(currentStage)) {
       return Math.min(currentStage + 1, totalStages);
     }
-    
     const maxSolvedStage = Math.max(0, ...solvedStages.filter(s => s <= totalStages));
     return Math.min(maxSolvedStage + 1, totalStages);
   };
@@ -169,7 +140,7 @@ const PlayerInterface = () => {
       setStagesSolved(prev => [...prev, currentStage]);
       announceToScreenReader(`🎯 EXCELLENT! Team ${teamName} solved stage ${currentStage}!`);
     }
-    
+
     updateProgress(currentStage, 100);
 
     if (currentStage === totalStages) {
@@ -188,12 +159,12 @@ const PlayerInterface = () => {
     if (!answersRevealed.includes(currentStage)) {
       setAnswersRevealed(prev => [...prev, currentStage]);
     }
-    
+
     if (!stagesSolved.includes(currentStage)) {
       setStagesSolved(prev => [...prev, currentStage]);
       announceToScreenReader(`📝 Answer revealed for stage ${currentStage}. Moving to next stage.`);
     }
-    
+
     updateProgress(currentStage, 100);
     setShowAnswerReveal(false);
 
@@ -321,7 +292,7 @@ const PlayerInterface = () => {
   if (isCompleted) {
     return (
       <div className="min-h-screen flex items-center justify-center p-6 relative">
-        {/* Animated Background Effects */}
+        {/* CSS-only animated background effects */}
         <div className="fixed inset-0 pointer-events-none">
           <motion.div
             initial={{ opacity: 0 }}
@@ -330,31 +301,23 @@ const PlayerInterface = () => {
             className="absolute inset-0 bg-gradient-to-br from-yellow-500/10 via-transparent to-green-500/10"
           />
           
-          {/* Floating celebration elements */}
-          {[...Array(20)].map((_, i) => (
-            <motion.div
-              key={i}
-              initial={{ 
-                opacity: 0, 
-                x: typeof window !== 'undefined' ? Math.random() * window.innerWidth : Math.random() * 1000, 
-                y: typeof window !== 'undefined' ? window.innerHeight + 100 : 1000 
-              }}
-              animate={{ 
-                opacity: [0, 1, 0], 
-                y: -100, 
-                x: typeof window !== 'undefined' ? Math.random() * window.innerWidth : Math.random() * 1000 
-              }}
-              transition={{
-                duration: Math.random() * 3 + 2,
-                delay: Math.random() * 2,
-                repeat: Infinity,
-                repeatDelay: Math.random() * 5
-              }}
-              className="absolute text-2xl pointer-events-none"
-            >
-              {['🎉', '🏆', '⭐', '🎊', '👏'][Math.floor(Math.random() * 5)]}
-            </motion.div>
-          ))}
+          {/* Floating celebration elements using CSS animations */}
+          <div className="absolute inset-0 overflow-hidden">
+            {[...Array(10)].map((_, i) => (
+              <div
+                key={i}
+                className="absolute text-2xl animate-bounce"
+                style={{
+                  left: `${Math.random() * 100}%`,
+                  top: `${Math.random() * 100}%`,
+                  animationDelay: `${Math.random() * 2}s`,
+                  animationDuration: `${2 + Math.random() * 2}s`
+                }}
+              >
+                {['🎉', '🏆', '⭐', '🎊', '👏'][Math.floor(Math.random() * 5)]}
+              </div>
+            ))}
+          </div>
         </div>
 
         <motion.div
@@ -371,16 +334,12 @@ const PlayerInterface = () => {
             className="mb-8"
           >
             <motion.div
-              animate={{ 
-                rotate: [0, 10, -10, 0],
-                scale: [1, 1.1, 1, 1.05, 1]
-              }}
+              animate={{ rotate: [0, 10, -10, 0], scale: [1, 1.1, 1, 1.05, 1] }}
               transition={{ duration: 2, repeat: Infinity, repeatType: "reverse" }}
               className="text-8xl mb-6"
             >
               🏆
             </motion.div>
-
             <motion.h1
               initial={{ scale: 0.5 }}
               animate={{ scale: 1 }}
@@ -389,7 +348,6 @@ const PlayerInterface = () => {
             >
               VICTORY!
             </motion.h1>
-
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -430,7 +388,7 @@ const PlayerInterface = () => {
               <Trophy className="w-8 h-8 text-yellow-400" />
               🏆 Team {teamName} - VICTORY SUMMARY 🏆
             </h2>
-
+            
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center mb-8">
               <motion.div whileHover={{ scale: 1.05 }} className="bg-gradient-to-br from-blue-500/20 to-blue-600/20 rounded-xl p-4">
                 <div className="text-4xl font-bold text-blue-400">{formatTime(3600 - timeRemaining)}</div>
@@ -469,14 +427,6 @@ const PlayerInterface = () => {
                   playerData={certificateData}
                   onDownload={() => {
                     announceToScreenReader(`🎉 SUCCESS! Certificate downloaded for Team ${teamName}! Congratulations on your victory!`);
-                    if (confetti) {
-                      confetti({
-                        particleCount: 100,
-                        spread: 70,
-                        origin: { y: 0.6 },
-                        colors: ['#10b981', '#3b82f6', '#f59e0b']
-                      });
-                    }
                   }}
                 />
               </motion.div>
@@ -672,7 +622,6 @@ const PlayerInterface = () => {
                   <Lightbulb className="w-4 h-4" />
                   Request Help
                 </button>
-
                 <button
                   onClick={() => setShowAnswerReveal(true)}
                   disabled={isCurrentStageCompleted()}
@@ -682,7 +631,6 @@ const PlayerInterface = () => {
                   <Eye className="w-4 h-4" />
                   {isCurrentStageCompleted() ? 'Stage Completed' : 'Reveal Answer'}
                 </button>
-
                 <div className="flex gap-2">
                   {currentStage > 1 && (
                     <button
@@ -694,7 +642,6 @@ const PlayerInterface = () => {
                       {currentStage - 1}
                     </button>
                   )}
-
                   {canGoToNext() && (
                     <button
                       onClick={handleGoToNextStage}
@@ -706,7 +653,6 @@ const PlayerInterface = () => {
                     </button>
                   )}
                 </div>
-
                 <button
                   onClick={() => setShowEndGameModal(true)}
                   className="w-full px-4 py-2 bg-red-500/20 text-red-300 rounded-lg hover:bg-red-500/30 transition-colors focus:outline-none focus:ring-2 focus:ring-red-400 flex items-center justify-center gap-2"
@@ -715,7 +661,6 @@ const PlayerInterface = () => {
                   <XCircle className="w-4 h-4" />
                   End Investigation
                 </button>
-
                 <button
                   onClick={handleHomeClick}
                   className="w-full px-4 py-2 bg-gray-500/20 text-gray-300 rounded-lg hover:bg-gray-500/30 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-400 flex items-center justify-center gap-2"
@@ -732,7 +677,6 @@ const PlayerInterface = () => {
 
       {/* Components */}
       <MusicController isAdmin={false} />
-
       <AnswerRevealModal
         isOpen={showAnswerReveal}
         onClose={() => setShowAnswerReveal(false)}

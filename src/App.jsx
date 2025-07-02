@@ -7,14 +7,14 @@ import { AdminProvider } from './providers/AdminProvider';
 import { ContentProvider } from './providers/ContentProvider';
 import './App.css';
 
-// Lazy load pages for better performance
-const LandingPage = React.lazy(() => import('./pages/LandingPage'));
-const SetupInterface = React.lazy(() => import('./pages/SetupInterface'));
-const PlayerInterface = React.lazy(() => import('./pages/PlayerInterface'));
-const AdminLogin = React.lazy(() => import('./pages/AdminLogin'));
-const AdminDashboard = React.lazy(() => import('./pages/AdminDashboard'));
+// Import pages directly instead of lazy loading to fix initial load
+import LandingPage from './pages/LandingPage';
+import SetupInterface from './pages/SetupInterface';
+import PlayerInterface from './pages/PlayerInterface';
+import AdminLogin from './pages/AdminLogin';
+import AdminDashboard from './pages/AdminDashboard';
 
-// Loading component
+// Simple loading component
 const LoadingScreen = () => (
   <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
     <motion.div
@@ -37,22 +37,20 @@ function App() {
             <Router>
               <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
                 {/* Live announcements for screen readers */}
-                <div 
-                  id="live-announcements" 
-                  aria-live="polite" 
-                  aria-atomic="true" 
+                <div
+                  id="live-announcements"
+                  aria-live="polite"
+                  aria-atomic="true"
                   className="sr-only"
                 ></div>
-                
-                <Suspense fallback={<LoadingScreen />}>
-                  <Routes>
-                    <Route path="/" element={<LandingPage />} />
-                    <Route path="/setup" element={<SetupInterface />} />
-                    <Route path="/game/:sessionId" element={<PlayerInterface />} />
-                    <Route path="/admin/login" element={<AdminLogin />} />
-                    <Route path="/admin/:sessionId" element={<AdminDashboard />} />
-                  </Routes>
-                </Suspense>
+
+                <Routes>
+                  <Route path="/" element={<LandingPage />} />
+                  <Route path="/setup" element={<SetupInterface />} />
+                  <Route path="/game/:sessionId" element={<PlayerInterface />} />
+                  <Route path="/admin/login" element={<AdminLogin />} />
+                  <Route path="/admin/:sessionId" element={<AdminDashboard />} />
+                </Routes>
               </div>
             </Router>
           </AdminProvider>
