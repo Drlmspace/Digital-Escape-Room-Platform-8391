@@ -1,16 +1,32 @@
-import React from 'react';
+import React, { Suspense } from 'react';
 import { HashRouter as Router, Routes, Route } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import LandingPage from './pages/LandingPage';
-import SetupInterface from './pages/SetupInterface';
-import PlayerInterface from './pages/PlayerInterface';
-import AdminLogin from './pages/AdminLogin';
-import AdminDashboard from './pages/AdminDashboard';
 import AccessibilityProvider from './providers/AccessibilityProvider';
 import { GameProvider } from './providers/GameProvider';
 import { AdminProvider } from './providers/AdminProvider';
 import { ContentProvider } from './providers/ContentProvider';
 import './App.css';
+
+// Lazy load pages for better performance
+const LandingPage = React.lazy(() => import('./pages/LandingPage'));
+const SetupInterface = React.lazy(() => import('./pages/SetupInterface'));
+const PlayerInterface = React.lazy(() => import('./pages/PlayerInterface'));
+const AdminLogin = React.lazy(() => import('./pages/AdminLogin'));
+const AdminDashboard = React.lazy(() => import('./pages/AdminDashboard'));
+
+// Loading component
+const LoadingScreen = () => (
+  <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+    <motion.div
+      initial={{ opacity: 0, scale: 0.8 }}
+      animate={{ opacity: 1, scale: 1 }}
+      className="text-center"
+    >
+      <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+      <p className="text-white text-lg">Loading Escape Room...</p>
+    </motion.div>
+  </div>
+);
 
 function App() {
   return (
@@ -21,15 +37,22 @@ function App() {
             <Router>
               <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
                 {/* Live announcements for screen readers */}
-                <div id="live-announcements" aria-live="polite" aria-atomic="true" className="sr-only"></div>
+                <div 
+                  id="live-announcements" 
+                  aria-live="polite" 
+                  aria-atomic="true" 
+                  className="sr-only"
+                ></div>
                 
-                <Routes>
-                  <Route path="/" element={<LandingPage />} />
-                  <Route path="/setup" element={<SetupInterface />} />
-                  <Route path="/game/:sessionId" element={<PlayerInterface />} />
-                  <Route path="/admin/login" element={<AdminLogin />} />
-                  <Route path="/admin/:sessionId" element={<AdminDashboard />} />
-                </Routes>
+                <Suspense fallback={<LoadingScreen />}>
+                  <Routes>
+                    <Route path="/" element={<LandingPage />} />
+                    <Route path="/setup" element={<SetupInterface />} />
+                    <Route path="/game/:sessionId" element={<PlayerInterface />} />
+                    <Route path="/admin/login" element={<AdminLogin />} />
+                    <Route path="/admin/:sessionId" element={<AdminDashboard />} />
+                  </Routes>
+                </Suspense>
               </div>
             </Router>
           </AdminProvider>

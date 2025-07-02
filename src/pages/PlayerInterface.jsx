@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Clock, Users, Lightbulb, CheckCircle, AlertCircle, Volume2, VolumeX, XCircle, Home, ArrowLeft, ArrowRight, Search, Skull, Wand2, Eye, Award, Trophy, Star, Download } from 'lucide-react';
+import { Clock, Users, Lightbulb, CheckCircle, AlertCircle, Volume2, VolumeX, XCircle, Home, ArrowLeft, ArrowRight, Search, Skull, Wand2, Eye, Award, Trophy, Star } from 'lucide-react';
 import { useGame } from '../providers/GameProvider';
 import { useAccessibility } from '../providers/AccessibilityProvider';
 import StageComponent from '../components/StageComponent';
@@ -10,7 +10,16 @@ import HintSystem from '../components/HintSystem';
 import MusicController from '../components/MusicController';
 import AnswerRevealModal from '../components/AnswerRevealModal';
 import CertificateGenerator from '../components/CertificateGenerator';
-import confetti from 'canvas-confetti';
+
+// Dynamically import confetti to avoid SSR issues
+let confetti = null;
+if (typeof window !== 'undefined') {
+  import('canvas-confetti').then(module => {
+    confetti = module.default;
+  }).catch(error => {
+    console.warn('Failed to load confetti:', error);
+  });
+}
 
 const PlayerInterface = () => {
   const { sessionId } = useParams();
@@ -18,10 +27,11 @@ const PlayerInterface = () => {
   const {
     currentStage, totalStages, timeRemaining, hintsUsed, hintsAvailable, progress, isCompleted, 
     advanceStage, updateProgress, endGame, theme, difficulty, teamName, sessionId: gameSessionId, 
-    completionTime, goToPreviousStage, goToNextStage, loadTeamBySessionId, isLoading
+    completionTime, goToPreviousStage, goToNextStage, loadTeamBySessionId, isLoading, error
   } = useGame();
   const { announceToScreenReader } = useAccessibility();
 
+  // Component state
   const [showHints, setShowHints] = useState(false);
   const [showEndGameModal, setShowEndGameModal] = useState(false);
   const [showExitConfirmModal, setShowExitConfirmModal] = useState(false);
@@ -39,17 +49,15 @@ const PlayerInterface = () => {
     }
   }, [sessionId, loadTeamBySessionId]);
 
+  // Celebration effect
   useEffect(() => {
-    if (isCompleted && !showCelebration) {
-      // Trigger celebration effects
+    if (isCompleted && !showCelebration && confetti) {
       setShowCelebration(true);
       
       // Multi-burst confetti celebration
       const duration = 3000;
       const animationEnd = Date.now() + duration;
-      const randomInRange = (min, max) => {
-        return Math.random() * (max - min) + min;
-      };
+      const randomInRange = (min, max) => Math.random() * (max - min) + min;
 
       const interval = setInterval(() => {
         const timeLeft = animationEnd - Date.now();
@@ -59,6 +67,7 @@ const PlayerInterface = () => {
         }
 
         const particleCount = 50 * (timeLeft / duration);
+        
         // Left side burst
         confetti({
           particleCount,
@@ -67,6 +76,7 @@ const PlayerInterface = () => {
           origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 },
           colors: ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444']
         });
+        
         // Right side burst
         confetti({
           particleCount,
@@ -81,37 +91,80 @@ const PlayerInterface = () => {
     }
   }, [isCompleted, showCelebration, announceToScreenReader, teamName]);
 
-  // Check if current stage can be accessed
+  // Stage access control
   useEffect(() => {
-    // Stage 1 is always accessible
     if (currentStage === 1) {
       setCanAdvance(true);
       return;
     }
     
-    // For other stages, check if previous stage is solved
     const previousStageSolved = stagesSolved.includes(currentStage - 1);
     setCanAdvance(previousStageSolved);
   }, [currentStage, stagesSolved]);
 
-  // Check for game completion when all stages are solved
+  // Game completion check
   useEffect(() => {
     if (stagesSolved.length === totalStages && !isCompleted) {
-      // All stages completed - trigger completion
       setTimeout(() => {
         announceToScreenReader(`🏆 VICTORY! Team ${teamName} has conquered all ${totalStages} stages!`);
       }, 500);
     }
   }, [stagesSolved.length, totalStages, isCompleted, teamName, announceToScreenReader]);
 
+  // Helper functions
   const formatTime = (seconds) => {
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
     return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
   };
 
+  const getThemeInfo = () => {
+    const themes = {
+      'murder-mystery': {
+        title: 'The Midnight Murder',
+        icon: Search,
+        color: 'from-red-500 to-orange-600',
+        completionMessage: 'The mystery has been solved!',
+        celebrationEmoji: '🔍'
+      },
+      'haunted-mansion': {
+        title: 'Cursed Manor',
+        icon: Skull,
+        color: 'from-purple-500 to-pink-600',
+        completionMessage: 'The spirits have found peace!',
+        celebrationEmoji: '👻'
+      },
+      'wizards-tower': {
+        title: 'The Enchanted Tower',
+        icon: Wand2,
+        color: 'from-blue-500 to-cyan-600',
+        completionMessage: 'You have mastered the arcane arts!',
+        celebrationEmoji: '🧙‍♂️'
+      }
+    };
+    return themes[theme] || themes['murder-mystery'];
+  };
+
+  const getNextAvailableStage = (currentStage, solvedStages, totalStages) => {
+    if (solvedStages.includes(currentStage)) {
+      return Math.min(currentStage + 1, totalStages);
+    }
+    
+    const maxSolvedStage = Math.max(0, ...solvedStages.filter(s => s <= totalStages));
+    return Math.min(maxSolvedStage + 1, totalStages);
+  };
+
+  const canGoToNext = () => {
+    const nextStage = getNextAvailableStage(currentStage, stagesSolved, totalStages);
+    return nextStage > currentStage && nextStage <= totalStages;
+  };
+
+  const isCurrentStageCompleted = () => {
+    return stagesSolved.includes(currentStage);
+  };
+
+  // Event handlers
   const handlePuzzleSolved = () => {
-    // Mark current stage as solved
     if (!stagesSolved.includes(currentStage)) {
       setStagesSolved(prev => [...prev, currentStage]);
       announceToScreenReader(`🎯 EXCELLENT! Team ${teamName} solved stage ${currentStage}!`);
@@ -119,14 +172,11 @@ const PlayerInterface = () => {
     
     updateProgress(currentStage, 100);
 
-    // Check if this was the final stage
     if (currentStage === totalStages) {
-      // Final stage completed!
       setTimeout(() => {
         announceToScreenReader(`🏆 INCREDIBLE! Team ${teamName} has completed the final stage and won the game!`);
       }, 1500);
     } else {
-      // Auto-advance to next stage
       setTimeout(() => {
         advanceStage();
         announceToScreenReader(`⭐ Moving to stage ${currentStage + 1}. Outstanding work, Team ${teamName}!`);
@@ -135,12 +185,10 @@ const PlayerInterface = () => {
   };
 
   const handleAnswerRevealed = () => {
-    // Mark answer as revealed for this stage
     if (!answersRevealed.includes(currentStage)) {
       setAnswersRevealed(prev => [...prev, currentStage]);
     }
     
-    // Mark stage as solved (but with penalty)
     if (!stagesSolved.includes(currentStage)) {
       setStagesSolved(prev => [...prev, currentStage]);
       announceToScreenReader(`📝 Answer revealed for stage ${currentStage}. Moving to next stage.`);
@@ -149,14 +197,11 @@ const PlayerInterface = () => {
     updateProgress(currentStage, 100);
     setShowAnswerReveal(false);
 
-    // Check if this was the final stage
     if (currentStage === totalStages) {
-      // Final stage completed via answer reveal
       setTimeout(() => {
         announceToScreenReader(`🏁 All stages completed! Final answer was revealed for Team ${teamName}.`);
       }, 1000);
     } else {
-      // Auto-advance to next stage
       setTimeout(() => {
         advanceStage();
         announceToScreenReader(`➡️ Moving to stage ${currentStage + 1}. Answer was revealed.`);
@@ -177,29 +222,6 @@ const PlayerInterface = () => {
       goToNextStage();
       announceToScreenReader(`➡️ Going to stage ${nextAvailable}`);
     }
-  };
-
-  // Helper function to determine next available stage
-  const getNextAvailableStage = (currentStage, solvedStages, totalStages) => {
-    // If current stage is solved, next stage is available
-    if (solvedStages.includes(currentStage)) {
-      return Math.min(currentStage + 1, totalStages);
-    }
-    
-    // Find the highest solved stage + 1
-    const maxSolvedStage = Math.max(0, ...solvedStages.filter(s => s <= totalStages));
-    return Math.min(maxSolvedStage + 1, totalStages);
-  };
-
-  // Check if next stage button should be shown
-  const canGoToNext = () => {
-    const nextStage = getNextAvailableStage(currentStage, stagesSolved, totalStages);
-    return nextStage > currentStage && nextStage <= totalStages;
-  };
-
-  // Check if current stage is completed
-  const isCurrentStageCompleted = () => {
-    return stagesSolved.includes(currentStage);
   };
 
   const toggleAudio = () => {
@@ -232,36 +254,9 @@ const PlayerInterface = () => {
     announceToScreenReader('✅ Continuing with current investigation');
   };
 
-  const getThemeInfo = () => {
-    const themes = {
-      'murder-mystery': {
-        title: 'The Midnight Murder',
-        icon: Search,
-        color: 'from-red-500 to-orange-600',
-        completionMessage: 'The mystery has been solved!',
-        celebrationEmoji: '🔍'
-      },
-      'haunted-mansion': {
-        title: 'Cursed Manor',
-        icon: Skull,
-        color: 'from-purple-500 to-pink-600',
-        completionMessage: 'The spirits have found peace!',
-        celebrationEmoji: '👻'
-      },
-      'wizards-tower': {
-        title: 'The Enchanted Tower',
-        icon: Wand2,
-        color: 'from-blue-500 to-cyan-600',
-        completionMessage: 'You have mastered the arcane arts!',
-        celebrationEmoji: '🧙‍♂️'
-      }
-    };
-    return themes[theme] || themes['murder-mystery'];
-  };
-
   const themeInfo = getThemeInfo();
 
-  // Calculate certificate data
+  // Certificate data
   const certificateData = {
     teamName: teamName || 'Escape Room Champions',
     theme: theme,
@@ -274,7 +269,7 @@ const PlayerInterface = () => {
     completionDate: completionTime || new Date().toISOString()
   };
 
-  // Show loading state
+  // Loading state
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -285,11 +280,44 @@ const PlayerInterface = () => {
         >
           <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-white text-lg">Loading your escape room...</p>
+          {error && (
+            <p className="text-red-400 text-sm mt-2">
+              {error} - Running in demo mode
+            </p>
+          )}
         </motion.div>
       </div>
     );
   }
 
+  // Error state
+  if (error && !teamName) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-6">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center max-w-md"
+        >
+          <div className="text-red-400 text-6xl mb-4">⚠️</div>
+          <h2 className="text-2xl font-bold text-white mb-4">Session Not Found</h2>
+          <p className="text-gray-300 mb-6">
+            The escape room session could not be loaded. This might happen if the session has expired or the URL is incorrect.
+          </p>
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => navigate('/setup')}
+            className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+          >
+            Start New Game
+          </motion.button>
+        </motion.div>
+      </div>
+    );
+  }
+
+  // Completion screen
   if (isCompleted) {
     return (
       <div className="min-h-screen flex items-center justify-center p-6 relative">
@@ -308,13 +336,13 @@ const PlayerInterface = () => {
               key={i}
               initial={{ 
                 opacity: 0, 
-                x: Math.random() * window.innerWidth, 
-                y: window.innerHeight + 100 
+                x: typeof window !== 'undefined' ? Math.random() * window.innerWidth : Math.random() * 1000, 
+                y: typeof window !== 'undefined' ? window.innerHeight + 100 : 1000 
               }}
               animate={{ 
                 opacity: [0, 1, 0], 
                 y: -100, 
-                x: Math.random() * window.innerWidth 
+                x: typeof window !== 'undefined' ? Math.random() * window.innerWidth : Math.random() * 1000 
               }}
               transition={{
                 duration: Math.random() * 3 + 2,
@@ -391,7 +419,7 @@ const PlayerInterface = () => {
             </motion.div>
           </motion.div>
 
-          {/* Achievement Stats */}
+          {/* Achievement Stats and Certificate */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -422,31 +450,7 @@ const PlayerInterface = () => {
               </motion.div>
             </div>
 
-            {/* Team Performance Rating */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 1.4 }}
-              className="bg-gradient-to-r from-yellow-500/20 to-orange-500/20 rounded-xl p-6 mb-8 border border-yellow-500/30"
-            >
-              <h3 className="text-2xl font-bold text-yellow-300 mb-4 flex items-center justify-center gap-2">
-                <Star className="w-6 h-6" />
-                🌟 TEAM ACHIEVEMENT RATING 🌟
-              </h3>
-              <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ delay: 1.6, type: "spring" }}
-                className="text-4xl font-bold text-white mb-4"
-              >
-                {getPerformanceRating(certificateData)}
-              </motion.div>
-              <p className="text-yellow-200 text-lg leading-relaxed">
-                {getPerformanceDescription(certificateData)}
-              </p>
-            </motion.div>
-
-            {/* Certificate Download - Main Feature */}
+            {/* Certificate Download */}
             <motion.div
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -465,24 +469,17 @@ const PlayerInterface = () => {
                   playerData={certificateData}
                   onDownload={() => {
                     announceToScreenReader(`🎉 SUCCESS! Certificate downloaded for Team ${teamName}! Congratulations on your victory!`);
-                    // Additional celebration confetti on download
-                    confetti({
-                      particleCount: 100,
-                      spread: 70,
-                      origin: { y: 0.6 },
-                      colors: ['#10b981', '#3b82f6', '#f59e0b']
-                    });
+                    if (confetti) {
+                      confetti({
+                        particleCount: 100,
+                        spread: 70,
+                        origin: { y: 0.6 },
+                        colors: ['#10b981', '#3b82f6', '#f59e0b']
+                      });
+                    }
                   }}
                 />
               </motion.div>
-              <motion.p
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 2.2 }}
-                className="text-green-300 text-sm mt-4"
-              >
-                📄 This certificate includes your team name, completion time, performance rating, and official verification.
-              </motion.p>
             </motion.div>
           </motion.div>
 
@@ -511,26 +508,14 @@ const PlayerInterface = () => {
               🏠 Back to Home
             </motion.button>
           </motion.div>
-
-          {/* Final Message */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 2.5 }}
-            className="mt-8 p-6 bg-gradient-to-r from-indigo-500/20 to-purple-500/20 rounded-xl border border-indigo-500/30"
-          >
-            <p className="text-indigo-200 text-lg">
-              🙏 Thank you for playing! Share your achievement and challenge your friends to beat your time!
-            </p>
-          </motion.div>
         </motion.div>
       </div>
     );
   }
 
+  // Main game interface
   return (
     <div className="min-h-screen p-4 md:p-6">
-      {/* Skip Link */}
       <a href="#puzzle-content" className="skip-link">
         Skip to puzzle content
       </a>
@@ -688,7 +673,6 @@ const PlayerInterface = () => {
                   Request Help
                 </button>
 
-                {/* Answer Reveal Button */}
                 <button
                   onClick={() => setShowAnswerReveal(true)}
                   disabled={isCurrentStageCompleted()}
@@ -699,9 +683,7 @@ const PlayerInterface = () => {
                   {isCurrentStageCompleted() ? 'Stage Completed' : 'Reveal Answer'}
                 </button>
 
-                {/* Navigation Buttons */}
                 <div className="flex gap-2">
-                  {/* Previous Stage Button */}
                   {currentStage > 1 && (
                     <button
                       onClick={handleGoToPreviousStage}
@@ -713,7 +695,6 @@ const PlayerInterface = () => {
                     </button>
                   )}
 
-                  {/* Next Stage Button */}
                   {canGoToNext() && (
                     <button
                       onClick={handleGoToNextStage}
@@ -749,10 +730,9 @@ const PlayerInterface = () => {
         </div>
       </main>
 
-      {/* Music Controller */}
+      {/* Components */}
       <MusicController isAdmin={false} />
 
-      {/* Answer Reveal Modal */}
       <AnswerRevealModal
         isOpen={showAnswerReveal}
         onClose={() => setShowAnswerReveal(false)}
@@ -761,7 +741,7 @@ const PlayerInterface = () => {
         theme={theme}
       />
 
-      {/* Help Modal */}
+      {/* Modals */}
       <AnimatePresence>
         {showHints && (
           <motion.div
@@ -812,51 +792,6 @@ const PlayerInterface = () => {
                     >
                       Reveal Answer (Affects Rating)
                     </button>
-                    <div className="flex gap-2">
-                      {currentStage > 1 && (
-                        <button
-                          onClick={() => {
-                            setShowHints(false);
-                            handleGoToPreviousStage();
-                          }}
-                          className="flex-1 px-3 py-2 bg-blue-500/20 text-blue-300 rounded-lg hover:bg-blue-500/30 transition-colors text-sm flex items-center justify-center gap-2"
-                        >
-                          <ArrowLeft className="w-4 h-4" />
-                          Previous
-                        </button>
-                      )}
-                      {canGoToNext() && (
-                        <button
-                          onClick={() => {
-                            setShowHints(false);
-                            handleGoToNextStage();
-                          }}
-                          className="flex-1 px-3 py-2 bg-green-500/20 text-green-300 rounded-lg hover:bg-green-500/30 transition-colors text-sm flex items-center justify-center gap-2"
-                        >
-                          Next
-                          <ArrowRight className="w-4 h-4" />
-                        </button>
-                      )}
-                    </div>
-                    <button
-                      onClick={() => {
-                        setShowHints(false);
-                        setShowEndGameModal(true);
-                      }}
-                      className="w-full px-3 py-2 bg-red-500/20 text-red-300 rounded-lg hover:bg-red-500/30 transition-colors text-sm"
-                    >
-                      End Investigation
-                    </button>
-                    <button
-                      onClick={() => {
-                        setShowHints(false);
-                        handleHomeClick();
-                      }}
-                      className="w-full px-3 py-2 bg-gray-500/20 text-gray-300 rounded-lg hover:bg-gray-500/30 transition-colors text-sm flex items-center justify-center gap-2"
-                    >
-                      <Home className="w-4 h-4" />
-                      Exit to Home
-                    </button>
                   </div>
                 </div>
               </div>
@@ -871,7 +806,6 @@ const PlayerInterface = () => {
         )}
       </AnimatePresence>
 
-      {/* Exit Confirmation Modal */}
       <AnimatePresence>
         {showExitConfirmModal && (
           <motion.div
@@ -899,15 +833,6 @@ const PlayerInterface = () => {
                 Are you sure you want to exit the investigation and return to the home page? 
                 Team {teamName}'s current progress will be lost.
               </p>
-              <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4 mb-6">
-                <h4 className="font-semibold text-yellow-300 mb-2">Team {teamName} Progress:</h4>
-                <div className="space-y-1 text-sm text-gray-300">
-                  <div>Stage: {currentStage} of {totalStages}</div>
-                  <div>Time Elapsed: {formatTime(3600 - timeRemaining)}</div>
-                  <div>Hints Used: {hintsUsed}</div>
-                  <div>Stages Solved: {stagesSolved.length}</div>
-                </div>
-              </div>
               <div className="flex flex-col sm:flex-row gap-3">
                 <button
                   onClick={handleCancelExit}
@@ -929,7 +854,6 @@ const PlayerInterface = () => {
         )}
       </AnimatePresence>
 
-      {/* End Investigation Modal */}
       <AnimatePresence>
         {showEndGameModal && (
           <motion.div
@@ -959,15 +883,6 @@ const PlayerInterface = () => {
                 Are you sure you want to end Team {teamName}'s current investigation? 
                 You'll be returned to the home page.
               </p>
-              <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4 mb-6">
-                <h4 className="font-semibold text-yellow-300 mb-2">Team {teamName} Summary:</h4>
-                <div className="space-y-1 text-sm text-gray-300">
-                  <div>Stage: {currentStage} of {totalStages}</div>
-                  <div>Time Elapsed: {formatTime(3600 - timeRemaining)}</div>
-                  <div>Hints Used: {hintsUsed}</div>
-                  <div>Stages Solved: {stagesSolved.length}</div>
-                </div>
-              </div>
               <div className="flex flex-col sm:flex-row gap-3">
                 <button
                   onClick={() => setShowEndGameModal(false)}
@@ -1019,30 +934,6 @@ const getStageTitle = (stage, theme) => {
     }
   };
   return stageTitles[theme]?.[stage] || 'Unknown Challenge';
-};
-
-const getPerformanceRating = (data) => {
-  const { stagesCompleted, hintsUsed, answersRevealed } = data;
-  
-  if (stagesCompleted === 6 && answersRevealed === 0 && hintsUsed <= 1) return 'LEGENDARY MASTER';
-  if (stagesCompleted === 6 && answersRevealed === 0 && hintsUsed <= 3) return 'EXCEPTIONAL DETECTIVE';
-  if (stagesCompleted === 6 && answersRevealed <= 1) return 'EXCELLENT INVESTIGATOR';
-  if (stagesCompleted >= 4 && answersRevealed <= 2) return 'SKILLED SOLVER';
-  if (stagesCompleted >= 2) return 'PROMISING PLAYER';
-  return 'BRAVE PARTICIPANT';
-};
-
-const getPerformanceDescription = (data) => {
-  const rating = getPerformanceRating(data);
-  const descriptions = {
-    'LEGENDARY MASTER': '🏆 OUTSTANDING! You solved all puzzles with minimal assistance - truly legendary performance!',
-    'EXCEPTIONAL DETECTIVE': '⭐ EXCELLENT! Your team demonstrated superior problem-solving skills and teamwork!',
-    'EXCELLENT INVESTIGATOR': '🎯 GREAT WORK! You completed the adventure with impressive performance and dedication!',
-    'SKILLED SOLVER': '💪 WELL DONE! Your team showed solid investigative abilities and determination!',
-    'PROMISING PLAYER': '👏 NICE EFFORT! Your team made good progress and learned valuable skills!',
-    'BRAVE PARTICIPANT': '🌟 THANK YOU! Every attempt builds experience and courage for future challenges!'
-  };
-  return descriptions[rating] || '🎮 Thank you for playing and being part of this amazing adventure!';
 };
 
 export default PlayerInterface;
