@@ -1,16 +1,17 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Download, Award, Calendar, User, Trophy, Star, Users } from 'lucide-react';
+import { SITE_CONFIG } from '../config/siteConfig';
 
 const CertificateGenerator = ({ playerData, onDownload }) => {
   const generateCertificate = () => {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
-    
+
     // Set canvas size for high quality
     canvas.width = 1200;
     canvas.height = 900;
-    
+
     // Background gradient
     const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
     gradient.addColorStop(0, '#1e293b');
@@ -18,48 +19,48 @@ const CertificateGenerator = ({ playerData, onDownload }) => {
     gradient.addColorStop(1, '#1e293b');
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    
+
     // Decorative border
     ctx.strokeStyle = '#3b82f6';
     ctx.lineWidth = 8;
     ctx.strokeRect(40, 40, canvas.width - 80, canvas.height - 80);
-    
+
     // Inner decorative border
     ctx.strokeStyle = '#8b5cf6';
     ctx.lineWidth = 4;
     ctx.strokeRect(60, 60, canvas.width - 120, canvas.height - 120);
-    
+
     // Title
     ctx.fillStyle = '#ffffff';
     ctx.font = 'bold 64px serif';
     ctx.textAlign = 'center';
     ctx.fillText('CERTIFICATE OF ACHIEVEMENT', canvas.width / 2, 180);
-    
+
     // Subtitle
     ctx.fillStyle = '#3b82f6';
     ctx.font = '32px serif';
-    ctx.fillText('Digital Escape Room Master', canvas.width / 2, 240);
-    
+    ctx.fillText(SITE_CONFIG.shortName, canvas.width / 2, 240);
+
     // Award text
     ctx.fillStyle = '#ffffff';
     ctx.font = '28px serif';
     ctx.fillText('This certifies that', canvas.width / 2, 320);
-    
+
     // Team name
     ctx.fillStyle = '#fbbf24';
     ctx.font = 'bold 48px serif';
     ctx.fillText(playerData.teamName || 'Escape Room Champions', canvas.width / 2, 390);
-    
+
     // Achievement text
     ctx.fillStyle = '#ffffff';
     ctx.font = '24px serif';
     ctx.fillText('has successfully completed', canvas.width / 2, 450);
-    
+
     // Theme name
     ctx.fillStyle = '#10b981';
     ctx.font = 'bold 36px serif';
     ctx.fillText(getThemeName(playerData.theme), canvas.width / 2, 510);
-    
+
     // Performance stats
     ctx.fillStyle = '#e5e7eb';
     ctx.font = '20px sans-serif';
@@ -67,36 +68,36 @@ const CertificateGenerator = ({ playerData, onDownload }) => {
     const statsY = 580;
     const leftColumn = canvas.width / 2 - 200;
     const rightColumn = canvas.width / 2 + 50;
-    
-    ctx.fillText(`🎯 Stages Completed: ${playerData.stagesCompleted}/6`, leftColumn, statsY);
-    ctx.fillText(`⏱️ Time Taken: ${playerData.timeTaken}`, rightColumn, statsY);
-    ctx.fillText(`💡 Hints Used: ${playerData.hintsUsed}`, leftColumn, statsY + 30);
-    ctx.fillText(`⭐ Difficulty: ${capitalize(playerData.difficulty)}`, rightColumn, statsY + 30);
-    ctx.fillText(`🏆 Performance: ${getPerformanceRating(playerData)}`, leftColumn, statsY + 60);
-    ctx.fillText(`📅 Completed: ${formatCompletionDate(playerData.completionDate)}`, rightColumn, statsY + 60);
-    
+
+    ctx.fillText(`Stages Completed: ${playerData.stagesCompleted}/6`, leftColumn, statsY);
+    ctx.fillText(`Time Taken: ${playerData.timeTaken}`, rightColumn, statsY);
+    ctx.fillText(`Hints Used: ${playerData.hintsUsed}`, leftColumn, statsY + 30);
+    ctx.fillText(`Difficulty: ${capitalize(playerData.difficulty)}`, rightColumn, statsY + 30);
+    ctx.fillText(`Performance: ${getPerformanceRating(playerData)}`, leftColumn, statsY + 60);
+    ctx.fillText(`Completed: ${formatCompletionDate(playerData.completionDate)}`, rightColumn, statsY + 60);
+
     // Team badge
     ctx.fillStyle = '#3b82f6';
     ctx.font = '18px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('🏅 Team Achievement Award', canvas.width / 2, statsY + 100);
-    
+    ctx.fillText('Team Achievement Award', canvas.width / 2, statsY + 100);
+
     // Footer
     ctx.fillStyle = '#6b7280';
     ctx.font = '18px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('Allfun.us Digital Escape Room Experience', canvas.width / 2, 750);
-    ctx.fillText('Powered by Advanced Puzzle Technology', canvas.width / 2, 780);
-    
+    ctx.fillText(SITE_CONFIG.certificateIssuer, canvas.width / 2, 750);
+    ctx.fillText(SITE_CONFIG.certificateFooter, canvas.width / 2, 780);
+
     // Decorative elements
     drawStar(ctx, 200, 200, 30, '#fbbf24');
     drawStar(ctx, canvas.width - 200, 200, 30, '#fbbf24');
     drawStar(ctx, 150, canvas.height - 150, 25, '#3b82f6');
     drawStar(ctx, canvas.width - 150, canvas.height - 150, 25, '#3b82f6');
-    
+
     // Team icon
     drawTeamIcon(ctx, canvas.width / 2 - 100, 320, 20, '#10b981');
-    
+
     return canvas;
   };
 
@@ -133,17 +134,11 @@ const CertificateGenerator = ({ playerData, onDownload }) => {
   };
 
   const getThemeName = (theme) => {
-    const themes = {
-      'murder-mystery': 'The Midnight Murder Mystery',
-      'haunted-mansion': 'Cursed Manor Investigation',
-      'wizards-tower': 'The Enchanted Tower Quest'
-    };
-    return themes[theme] || 'Digital Adventure';
+    return SITE_CONFIG.themes[theme]?.title || 'Digital Adventure';
   };
 
   const getPerformanceRating = (data) => {
     const { stagesCompleted, hintsUsed, difficulty, answersRevealed = 0 } = data;
-    
     if (stagesCompleted === 6 && answersRevealed === 0 && hintsUsed <= 1) return 'Legendary';
     if (stagesCompleted === 6 && answersRevealed === 0 && hintsUsed <= 3) return 'Exceptional';
     if (stagesCompleted === 6 && answersRevealed <= 1) return 'Excellent';
@@ -178,7 +173,7 @@ const CertificateGenerator = ({ playerData, onDownload }) => {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    
+
     if (onDownload) onDownload();
   };
 
