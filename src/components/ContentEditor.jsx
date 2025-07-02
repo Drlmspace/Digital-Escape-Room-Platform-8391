@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Edit3, Save, X, RotateCcw, Eye, EyeOff, Copy, Check, AlertTriangle, FileText, Wand2, Search, Skull } from 'lucide-react';
+import { Edit3, Save, X, RotateCcw, Eye, EyeOff, Copy, Check, AlertTriangle, FileText, Wand2, Search, Skull, Plus, Minus, Crown, Gamepad2 } from 'lucide-react';
 import { useAccessibility } from '../providers/AccessibilityProvider';
 
 const ContentEditor = ({ onContentUpdate, currentTheme, isVisible, onClose }) => {
@@ -12,24 +12,39 @@ const ContentEditor = ({ onContentUpdate, currentTheme, isVisible, onClose }) =>
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [previewMode, setPreviewMode] = useState(false);
   const [copiedStage, setCopiedStage] = useState(null);
+  const [expandedStages, setExpandedStages] = useState(new Set());
+  const [gameInfoExpanded, setGameInfoExpanded] = useState(true);
 
   // Initialize content from default templates
   useEffect(() => {
     const defaultContent = getDefaultContent(currentTheme);
     setEditingContent(defaultContent);
     setOriginalContent(JSON.parse(JSON.stringify(defaultContent)));
+    // Expand game info and first stage by default
+    setExpandedStages(new Set([1]));
+    setGameInfoExpanded(true);
   }, [currentTheme]);
 
-  const handleFieldEdit = (stage, field, value) => {
-    setEditingContent(prev => ({
-      ...prev,
-      [stage]: {
-        ...prev[stage],
-        [field]: value
-      }
-    }));
+  const handleFieldEdit = (section, field, value) => {
+    if (section === 'gameInfo') {
+      setEditingContent(prev => ({
+        ...prev,
+        gameInfo: {
+          ...prev.gameInfo,
+          [field]: value
+        }
+      }));
+    } else {
+      setEditingContent(prev => ({
+        ...prev,
+        [section]: {
+          ...prev[section],
+          [field]: value
+        }
+      }));
+    }
     setHasUnsavedChanges(true);
-    announceToScreenReader(`Editing ${field} for stage ${stage}`);
+    announceToScreenReader(`Editing ${field} for ${section === 'gameInfo' ? 'game information' : `stage ${section}`}`);
   };
 
   const handleSaveStage = (stage) => {
@@ -44,13 +59,21 @@ const ContentEditor = ({ onContentUpdate, currentTheme, isVisible, onClose }) =>
   };
 
   const handleResetStage = (stage) => {
-    setEditingContent(prev => ({
-      ...prev,
-      [stage]: { ...originalContent[stage] }
-    }));
+    if (stage === 'gameInfo') {
+      setEditingContent(prev => ({
+        ...prev,
+        gameInfo: { ...originalContent.gameInfo }
+      }));
+      announceToScreenReader('Game information reset to original content');
+    } else {
+      setEditingContent(prev => ({
+        ...prev,
+        [stage]: { ...originalContent[stage] }
+      }));
+      announceToScreenReader(`Stage ${stage} reset to original content`);
+    }
     setActiveEditStage(null);
     setActiveEditField(null);
-    announceToScreenReader(`Stage ${stage} reset to original content`);
   };
 
   const handleSaveAll = () => {
@@ -74,11 +97,23 @@ const ContentEditor = ({ onContentUpdate, currentTheme, isVisible, onClose }) =>
   };
 
   const copyStageContent = (stage) => {
-    const content = editingContent[stage];
+    const content = stage === 'gameInfo' ? editingContent.gameInfo : editingContent[stage];
     navigator.clipboard.writeText(JSON.stringify(content, null, 2));
     setCopiedStage(stage);
-    announceToScreenReader(`Stage ${stage} content copied to clipboard`);
+    announceToScreenReader(`${stage === 'gameInfo' ? 'Game information' : `Stage ${stage}`} content copied to clipboard`);
     setTimeout(() => setCopiedStage(null), 2000);
+  };
+
+  const toggleStageExpansion = (stage) => {
+    setExpandedStages(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(stage)) {
+        newSet.delete(stage);
+      } else {
+        newSet.add(stage);
+      }
+      return newSet;
+    });
   };
 
   const getThemeInfo = (theme) => {
@@ -137,7 +172,7 @@ const ContentEditor = ({ onContentUpdate, currentTheme, isVisible, onClose }) =>
                   Content Editor
                 </h2>
                 <p className="text-gray-400">
-                  {themeInfo.name} - Edit stage titles and descriptions
+                  {themeInfo.name} - Edit game title, description, stages, and backstories
                 </p>
               </div>
             </div>
@@ -187,6 +222,28 @@ const ContentEditor = ({ onContentUpdate, currentTheme, isVisible, onClose }) =>
               <RotateCcw className="w-4 h-4" />
               Reset All to Default
             </motion.button>
+            <button
+              onClick={() => {
+                setExpandedStages(new Set([1, 2, 3, 4, 5, 6]));
+                setGameInfoExpanded(true);
+                announceToScreenReader('All sections expanded');
+              }}
+              className="px-3 py-2 bg-blue-500/20 text-blue-300 rounded-lg hover:bg-blue-500/30 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-400 flex items-center gap-2"
+            >
+              <Plus className="w-4 h-4" />
+              Expand All
+            </button>
+            <button
+              onClick={() => {
+                setExpandedStages(new Set());
+                setGameInfoExpanded(false);
+                announceToScreenReader('All sections collapsed');
+              }}
+              className="px-3 py-2 bg-gray-500/20 text-gray-300 rounded-lg hover:bg-gray-500/30 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-400 flex items-center gap-2"
+            >
+              <Minus className="w-4 h-4" />
+              Collapse All
+            </button>
           </div>
         </div>
 
@@ -197,6 +254,27 @@ const ContentEditor = ({ onContentUpdate, currentTheme, isVisible, onClose }) =>
               <ContentPreview content={editingContent} theme={currentTheme} />
             ) : (
               <div className="space-y-6">
+                {/* Game Information Editor */}
+                <GameInfoEditor
+                  content={editingContent.gameInfo || {}}
+                  originalContent={originalContent.gameInfo || {}}
+                  isEditing={activeEditStage === 'gameInfo'}
+                  activeField={activeEditField}
+                  isExpanded={gameInfoExpanded}
+                  onToggleExpansion={() => setGameInfoExpanded(!gameInfoExpanded)}
+                  onStartEdit={(field) => {
+                    setActiveEditStage('gameInfo');
+                    setActiveEditField(field);
+                  }}
+                  onFieldChange={(field, value) => handleFieldEdit('gameInfo', field, value)}
+                  onSave={() => handleSaveStage('gameInfo')}
+                  onReset={() => handleResetStage('gameInfo')}
+                  onCopy={() => copyStageContent('gameInfo')}
+                  isCopied={copiedStage === 'gameInfo'}
+                  themeInfo={themeInfo}
+                />
+
+                {/* Stage Editors */}
                 {Array.from({ length: themeInfo.stages }, (_, i) => i + 1).map((stage) => (
                   <StageEditor
                     key={stage}
@@ -205,6 +283,8 @@ const ContentEditor = ({ onContentUpdate, currentTheme, isVisible, onClose }) =>
                     originalContent={originalContent[stage] || {}}
                     isEditing={activeEditStage === stage}
                     activeField={activeEditField}
+                    isExpanded={expandedStages.has(stage)}
+                    onToggleExpansion={() => toggleStageExpansion(stage)}
                     onStartEdit={(field) => {
                       setActiveEditStage(stage);
                       setActiveEditField(field);
@@ -225,12 +305,219 @@ const ContentEditor = ({ onContentUpdate, currentTheme, isVisible, onClose }) =>
   );
 };
 
+const GameInfoEditor = ({
+  content,
+  originalContent,
+  isEditing,
+  activeField,
+  isExpanded,
+  onToggleExpansion,
+  onStartEdit,
+  onFieldChange,
+  onSave,
+  onReset,
+  onCopy,
+  isCopied,
+  themeInfo
+}) => {
+  const hasChanges = JSON.stringify(content) !== JSON.stringify(originalContent);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className={`bg-gradient-to-r from-purple-500/10 to-blue-500/10 rounded-xl border-2 transition-all duration-300 ${
+        isEditing 
+          ? 'border-purple-500/40' 
+          : hasChanges 
+          ? 'border-yellow-500/40' 
+          : 'border-purple-500/20'
+      }`}
+    >
+      {/* Game Info Header */}
+      <div className="p-4 border-b border-slate-700/50">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={onToggleExpansion}
+              className="p-2 hover:bg-white/10 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-purple-400"
+              aria-label={`${isExpanded ? 'Collapse' : 'Expand'} game information`}
+            >
+              {isExpanded ? <Minus className="w-4 h-4 text-gray-400" /> : <Plus className="w-4 h-4 text-gray-400" />}
+            </button>
+            
+            <h3 className="text-xl font-semibold text-white flex items-center gap-2">
+              <Crown className="w-6 h-6 text-purple-400" />
+              Game Information
+              {hasChanges && (
+                <span className="px-2 py-1 bg-yellow-500/20 text-yellow-300 rounded text-xs">
+                  Modified
+                </span>
+              )}
+            </h3>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={onCopy}
+              className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-gray-400"
+              aria-label="Copy game information"
+            >
+              {isCopied ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
+            </button>
+            
+            {hasChanges && (
+              <button
+                onClick={onReset}
+                className="p-2 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-red-400"
+                aria-label="Reset game information to original"
+              >
+                <RotateCcw className="w-4 h-4" />
+              </button>
+            )}
+            
+            {isEditing && (
+              <button
+                onClick={onSave}
+                className="p-2 text-green-400 hover:text-green-300 hover:bg-green-500/10 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-green-400"
+                aria-label="Save changes to game information"
+              >
+                <Save className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Quick Preview when collapsed */}
+        {!isExpanded && (
+          <div className="mt-3 text-sm text-gray-400">
+            <p className="truncate">
+              <span className="font-medium text-purple-300">{content.gameTitle || themeInfo.name}</span>
+              {content.gameDescription && ` - ${content.gameDescription.substring(0, 60)}...`}
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Game Info Content */}
+      <AnimatePresence>
+        {isExpanded && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="p-6 space-y-6"
+          >
+            {/* Game Title Editor */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-medium text-purple-300 flex items-center gap-2">
+                  <Gamepad2 className="w-4 h-4" />
+                  Game Title
+                </label>
+                {!isEditing && (
+                  <button
+                    onClick={() => onStartEdit('gameTitle')}
+                    className="p-1 text-gray-400 hover:text-white hover:bg-white/10 rounded transition-colors focus:outline-none focus:ring-2 focus:ring-purple-400"
+                    aria-label="Edit game title"
+                  >
+                    <Edit3 className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+              
+              {isEditing && activeField === 'gameTitle' ? (
+                <div className="space-y-2">
+                  <input
+                    type="text"
+                    value={content.gameTitle || ''}
+                    onChange={(e) => onFieldChange('gameTitle', e.target.value)}
+                    className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                    placeholder="Enter game title..."
+                    maxLength={80}
+                    autoFocus
+                  />
+                  <div className="text-xs text-gray-400">
+                    {(content.gameTitle || '').length}/80 characters
+                  </div>
+                </div>
+              ) : (
+                <div className="p-3 bg-slate-600/50 rounded-lg border border-transparent hover:border-purple-500/30 transition-colors cursor-pointer"
+                     onClick={() => onStartEdit('gameTitle')}>
+                  <p className="text-white font-medium text-lg">
+                    {content.gameTitle || themeInfo.name || 'Click to add game title...'}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Game Description Editor */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-medium text-purple-300 flex items-center gap-2">
+                  <FileText className="w-4 h-4" />
+                  Game Description
+                </label>
+                {!isEditing && (
+                  <button
+                    onClick={() => onStartEdit('gameDescription')}
+                    className="p-1 text-gray-400 hover:text-white hover:bg-white/10 rounded transition-colors focus:outline-none focus:ring-2 focus:ring-purple-400"
+                    aria-label="Edit game description"
+                  >
+                    <Edit3 className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+              
+              {isEditing && activeField === 'gameDescription' ? (
+                <div className="space-y-2">
+                  <textarea
+                    value={content.gameDescription || ''}
+                    onChange={(e) => onFieldChange('gameDescription', e.target.value)}
+                    className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-400 resize-none"
+                    placeholder="Enter game description..."
+                    rows="4"
+                    maxLength={300}
+                    autoFocus
+                  />
+                  <div className="text-xs text-gray-400">
+                    {(content.gameDescription || '').length}/300 characters
+                  </div>
+                </div>
+              ) : (
+                <div className="p-3 bg-slate-600/50 rounded-lg border border-transparent hover:border-purple-500/30 transition-colors cursor-pointer min-h-[80px]"
+                     onClick={() => onStartEdit('gameDescription')}>
+                  <p className="text-gray-300 leading-relaxed">
+                    {content.gameDescription || 'Click to add game description...'}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Game Info Guidelines */}
+            <div className="bg-purple-500/10 border border-purple-500/20 rounded-lg p-4">
+              <h4 className="font-semibold text-purple-300 mb-2">🎮 Game Information Guidelines</h4>
+              <ul className="text-purple-200 text-sm space-y-1">
+                <li>• <strong>Game Title:</strong> The main name displayed for this escape room (max 80 chars)</li>
+                <li>• <strong>Game Description:</strong> Overview shown to players before starting (max 300 chars)</li>
+                <li>• These settings override the default theme names in setup and gameplay</li>
+              </ul>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  );
+};
+
 const StageEditor = ({
   stage,
   content,
   originalContent,
   isEditing,
   activeField,
+  isExpanded,
+  onToggleExpansion,
   onStartEdit,
   onFieldChange,
   onSave,
@@ -244,154 +531,228 @@ const StageEditor = ({
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`bg-slate-700/50 rounded-xl p-6 border-2 transition-all duration-300 ${
-        isEditing ? 'border-blue-500/40' : hasChanges ? 'border-yellow-500/40' : 'border-transparent'
+      className={`bg-slate-700/50 rounded-xl border-2 transition-all duration-300 ${
+        isEditing 
+          ? 'border-blue-500/40' 
+          : hasChanges 
+          ? 'border-yellow-500/40' 
+          : 'border-transparent'
       }`}
     >
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-xl font-semibold text-white flex items-center gap-2">
-          <span className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-sm font-bold">
-            {stage}
-          </span>
-          Stage {stage}
-          {hasChanges && (
-            <span className="px-2 py-1 bg-yellow-500/20 text-yellow-300 rounded text-xs">
-              Modified
-            </span>
-          )}
-        </h3>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={onCopy}
-            className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-gray-400"
-            aria-label={`Copy stage ${stage} content`}
+      {/* Stage Header */}
+      <div className="p-4 border-b border-slate-700/50">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={onToggleExpansion}
+              className="p-2 hover:bg-white/10 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-400"
+              aria-label={`${isExpanded ? 'Collapse' : 'Expand'} stage ${stage}`}
+            >
+              {isExpanded ? <Minus className="w-4 h-4 text-gray-400" /> : <Plus className="w-4 h-4 text-gray-400" />}
+            </button>
+            
+            <h3 className="text-xl font-semibold text-white flex items-center gap-2">
+              <span className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-sm font-bold">
+                {stage}
+              </span>
+              Stage {stage}
+              {hasChanges && (
+                <span className="px-2 py-1 bg-yellow-500/20 text-yellow-300 rounded text-xs">
+                  Modified
+                </span>
+              )}
+            </h3>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={onCopy}
+              className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-gray-400"
+              aria-label={`Copy stage ${stage} content`}
+            >
+              {isCopied ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
+            </button>
+            
+            {hasChanges && (
+              <button
+                onClick={onReset}
+                className="p-2 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-red-400"
+                aria-label={`Reset stage ${stage} to original`}
+              >
+                <RotateCcw className="w-4 h-4" />
+              </button>
+            )}
+            
+            {isEditing && (
+              <button
+                onClick={onSave}
+                className="p-2 text-green-400 hover:text-green-300 hover:bg-green-500/10 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-green-400"
+                aria-label={`Save changes to stage ${stage}`}
+              >
+                <Save className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Quick Preview when collapsed */}
+        {!isExpanded && (
+          <div className="mt-3 text-sm text-gray-400">
+            <p className="truncate">
+              <span className="font-medium text-white">{content.title || 'No title set'}</span>
+              {content.description && ` - ${content.description.substring(0, 60)}...`}
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Stage Content */}
+      <AnimatePresence>
+        {isExpanded && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="p-6 space-y-6"
           >
-            {isCopied ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
-          </button>
-          {hasChanges && (
-            <button
-              onClick={onReset}
-              className="p-2 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-red-400"
-              aria-label={`Reset stage ${stage} to original`}
-            >
-              <RotateCcw className="w-4 h-4" />
-            </button>
-          )}
-          {isEditing && (
-            <button
-              onClick={onSave}
-              className="p-2 text-green-400 hover:text-green-300 hover:bg-green-500/10 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-green-400"
-              aria-label={`Save changes to stage ${stage}`}
-            >
-              <Save className="w-4 h-4" />
-            </button>
-          )}
-        </div>
-      </div>
-
-      <div className="space-y-4">
-        {/* Title Editor */}
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <label className="block text-sm font-medium text-gray-300">
-              Stage Title
-            </label>
-            {!isEditing && (
-              <button
-                onClick={() => onStartEdit('title')}
-                className="p-1 text-gray-400 hover:text-white hover:bg-white/10 rounded transition-colors focus:outline-none focus:ring-2 focus:ring-blue-400"
-                aria-label={`Edit title for stage ${stage}`}
-              >
-                <Edit3 className="w-4 h-4" />
-              </button>
-            )}
-          </div>
-          {isEditing && activeField === 'title' ? (
-            <input
-              type="text"
-              value={content.title || ''}
-              onChange={(e) => onFieldChange('title', e.target.value)}
-              className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-400"
-              placeholder="Enter stage title..."
-              autoFocus
-            />
-          ) : (
-            <div className="p-3 bg-slate-600/50 rounded-lg border border-transparent hover:border-blue-500/30 transition-colors">
-              <p className="text-white font-medium">
-                {content.title || 'No title set'}
-              </p>
+            {/* Title Editor */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-medium text-gray-300">
+                  Stage Title
+                </label>
+                {!isEditing && (
+                  <button
+                    onClick={() => onStartEdit('title')}
+                    className="p-1 text-gray-400 hover:text-white hover:bg-white/10 rounded transition-colors focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    aria-label={`Edit title for stage ${stage}`}
+                  >
+                    <Edit3 className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+              
+              {isEditing && activeField === 'title' ? (
+                <div className="space-y-2">
+                  <input
+                    type="text"
+                    value={content.title || ''}
+                    onChange={(e) => onFieldChange('title', e.target.value)}
+                    className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    placeholder="Enter stage title..."
+                    maxLength={100}
+                    autoFocus
+                  />
+                  <div className="text-xs text-gray-400">
+                    {(content.title || '').length}/100 characters
+                  </div>
+                </div>
+              ) : (
+                <div className="p-3 bg-slate-600/50 rounded-lg border border-transparent hover:border-blue-500/30 transition-colors cursor-pointer"
+                     onClick={() => onStartEdit('title')}>
+                  <p className="text-white font-medium">
+                    {content.title || 'Click to add stage title...'}
+                  </p>
+                </div>
+              )}
             </div>
-          )}
-        </div>
 
-        {/* Description Editor */}
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <label className="block text-sm font-medium text-gray-300">
-              Stage Description
-            </label>
-            {!isEditing && (
-              <button
-                onClick={() => onStartEdit('description')}
-                className="p-1 text-gray-400 hover:text-white hover:bg-white/10 rounded transition-colors focus:outline-none focus:ring-2 focus:ring-blue-400"
-                aria-label={`Edit description for stage ${stage}`}
-              >
-                <Edit3 className="w-4 h-4" />
-              </button>
-            )}
-          </div>
-          {isEditing && activeField === 'description' ? (
-            <textarea
-              value={content.description || ''}
-              onChange={(e) => onFieldChange('description', e.target.value)}
-              className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none"
-              placeholder="Enter stage description..."
-              rows="4"
-              autoFocus
-            />
-          ) : (
-            <div className="p-3 bg-slate-600/50 rounded-lg border border-transparent hover:border-blue-500/30 transition-colors">
-              <p className="text-gray-300 leading-relaxed">
-                {content.description || 'No description set'}
-              </p>
+            {/* Description Editor */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-medium text-gray-300">
+                  Stage Description
+                </label>
+                {!isEditing && (
+                  <button
+                    onClick={() => onStartEdit('description')}
+                    className="p-1 text-gray-400 hover:text-white hover:bg-white/10 rounded transition-colors focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    aria-label={`Edit description for stage ${stage}`}
+                  >
+                    <Edit3 className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+              
+              {isEditing && activeField === 'description' ? (
+                <div className="space-y-2">
+                  <textarea
+                    value={content.description || ''}
+                    onChange={(e) => onFieldChange('description', e.target.value)}
+                    className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none"
+                    placeholder="Enter stage description..."
+                    rows="4"
+                    maxLength={500}
+                    autoFocus
+                  />
+                  <div className="text-xs text-gray-400">
+                    {(content.description || '').length}/500 characters
+                  </div>
+                </div>
+              ) : (
+                <div className="p-3 bg-slate-600/50 rounded-lg border border-transparent hover:border-blue-500/30 transition-colors cursor-pointer min-h-[80px]"
+                     onClick={() => onStartEdit('description')}>
+                  <p className="text-gray-300 leading-relaxed">
+                    {content.description || 'Click to add stage description...'}
+                  </p>
+                </div>
+              )}
             </div>
-          )}
-        </div>
 
-        {/* Backstory Editor */}
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <label className="block text-sm font-medium text-gray-300">
-              Backstory (Optional)
-            </label>
-            {!isEditing && (
-              <button
-                onClick={() => onStartEdit('backstory')}
-                className="p-1 text-gray-400 hover:text-white hover:bg-white/10 rounded transition-colors focus:outline-none focus:ring-2 focus:ring-blue-400"
-                aria-label={`Edit backstory for stage ${stage}`}
-              >
-                <Edit3 className="w-4 h-4" />
-              </button>
-            )}
-          </div>
-          {isEditing && activeField === 'backstory' ? (
-            <textarea
-              value={content.backstory || ''}
-              onChange={(e) => onFieldChange('backstory', e.target.value)}
-              className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none"
-              placeholder="Enter backstory..."
-              rows="3"
-              autoFocus
-            />
-          ) : (
-            <div className="p-3 bg-slate-600/50 rounded-lg border border-transparent hover:border-blue-500/30 transition-colors">
-              <p className="text-gray-300 text-sm leading-relaxed">
-                {content.backstory || 'No backstory set'}
-              </p>
+            {/* Backstory Editor */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-medium text-gray-300">
+                  Background Story (Optional)
+                </label>
+                {!isEditing && (
+                  <button
+                    onClick={() => onStartEdit('backstory')}
+                    className="p-1 text-gray-400 hover:text-white hover:bg-white/10 rounded transition-colors focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    aria-label={`Edit backstory for stage ${stage}`}
+                  >
+                    <Edit3 className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+              
+              {isEditing && activeField === 'backstory' ? (
+                <div className="space-y-2">
+                  <textarea
+                    value={content.backstory || ''}
+                    onChange={(e) => onFieldChange('backstory', e.target.value)}
+                    className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none"
+                    placeholder="Enter background story..."
+                    rows="3"
+                    maxLength={400}
+                    autoFocus
+                  />
+                  <div className="text-xs text-gray-400">
+                    {(content.backstory || '').length}/400 characters
+                  </div>
+                </div>
+              ) : (
+                <div className="p-3 bg-slate-600/50 rounded-lg border border-transparent hover:border-blue-500/30 transition-colors cursor-pointer"
+                     onClick={() => onStartEdit('backstory')}>
+                  <p className="text-gray-300 text-sm leading-relaxed">
+                    {content.backstory || 'Click to add background story...'}
+                  </p>
+                </div>
+              )}
             </div>
-          )}
-        </div>
-      </div>
+
+            {/* Content Guidelines */}
+            <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
+              <h4 className="font-semibold text-blue-300 mb-2">📝 Content Guidelines</h4>
+              <ul className="text-blue-200 text-sm space-y-1">
+                <li>• <strong>Title:</strong> Keep it concise and intriguing (max 100 chars)</li>
+                <li>• <strong>Description:</strong> Explain what players need to do (max 500 chars)</li>
+                <li>• <strong>Backstory:</strong> Provide context and atmosphere (max 400 chars)</li>
+              </ul>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 };
@@ -420,7 +781,30 @@ const ContentPreview = ({ content, theme }) => {
         </p>
       </div>
 
-      {Object.entries(content).map(([stage, stageContent]) => (
+      {/* Game Information Preview */}
+      {content.gameInfo && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-gradient-to-r from-purple-500/20 to-blue-500/20 rounded-xl p-6 border border-purple-500/30"
+        >
+          <div className="flex items-center gap-3 mb-4">
+            <Crown className="w-8 h-8 text-purple-400" />
+            <h3 className="text-2xl font-semibold text-white">
+              {content.gameInfo.gameTitle || themeInfo.name}
+            </h3>
+          </div>
+
+          {content.gameInfo.gameDescription && (
+            <p className="text-purple-200 text-lg leading-relaxed">
+              {content.gameInfo.gameDescription}
+            </p>
+          )}
+        </motion.div>
+      )}
+
+      {/* Stages Preview */}
+      {Object.entries(content).filter(([key]) => key !== 'gameInfo').map(([stage, stageContent]) => (
         <motion.div
           key={stage}
           initial={{ opacity: 0, y: 20 }}
@@ -461,6 +845,10 @@ const ContentPreview = ({ content, theme }) => {
 const getDefaultContent = (theme) => {
   const defaultContents = {
     'murder-mystery': {
+      gameInfo: {
+        gameTitle: "The Midnight Murder",
+        gameDescription: "Solve a classic whodunit in a Victorian mansion. Examine evidence, interview suspects, and catch the killer before they escape justice."
+      },
       1: {
         title: "The Crime Scene",
         description: "A wealthy businessman has been found dead in his locked study. Examine the evidence to determine what happened.",
@@ -493,6 +881,10 @@ const getDefaultContent = (theme) => {
       }
     },
     'haunted-mansion': {
+      gameInfo: {
+        gameTitle: "Cursed Manor",
+        gameDescription: "Escape from a supernatural mansion filled with ghosts, curses, and dark family secrets. Help the restless spirits find peace."
+      },
       1: {
         title: "The Restless Spirits",
         description: "Strange phenomena plague this old mansion. Investigate the supernatural occurrences to understand what the spirits want.",
@@ -525,6 +917,10 @@ const getDefaultContent = (theme) => {
       }
     },
     'wizards-tower': {
+      gameInfo: {
+        gameTitle: "The Enchanted Tower",
+        gameDescription: "Master magical spells, brew potions, and overcome mystical challenges in a wizard's tower. Prove yourself worthy of arcane knowledge."
+      },
       1: {
         title: "The Apprentice's Trial",
         description: "You are a new apprentice in the wizard's tower. Learn the basic principles of magic by studying the ancient artifacts.",

@@ -14,7 +14,7 @@ export const ContentProvider = ({ children }) => {
   const [customContent, setCustomContent] = useState({});
 
   const getContent = (theme, stage) => {
-    return null; // Return null to use default content
+    return customContent[theme]?.[stage] || null;
   };
 
   const updateContent = (theme, content) => {
@@ -22,6 +22,14 @@ export const ContentProvider = ({ children }) => {
       ...prev,
       [theme]: content
     }));
+    
+    // Save to localStorage for persistence
+    localStorage.setItem('customContent', JSON.stringify({
+      ...customContent,
+      [theme]: content
+    }));
+    
+    console.log(`Updated content for ${theme}:`, content);
   };
 
   const getAllContent = (theme) => {
@@ -32,8 +40,14 @@ export const ContentProvider = ({ children }) => {
     setCustomContent(prev => {
       const newContent = { ...prev };
       delete newContent[theme];
+      
+      // Update localStorage
+      localStorage.setItem('customContent', JSON.stringify(newContent));
+      
       return newContent;
     });
+    
+    console.log(`Reset content for ${theme}`);
   };
 
   const exportContent = (theme) => {
@@ -45,6 +59,8 @@ export const ContentProvider = ({ children }) => {
       linkElement.setAttribute('href', dataUri);
       linkElement.setAttribute('download', `${theme}_content.json`);
       linkElement.click();
+      
+      console.log(`Exported content for ${theme}`);
     }
   };
 
@@ -52,8 +68,10 @@ export const ContentProvider = ({ children }) => {
     try {
       const parsedContent = typeof contentData === 'string' ? JSON.parse(contentData) : contentData;
       updateContent(theme, parsedContent);
+      console.log(`Imported content for ${theme}:`, parsedContent);
       return true;
     } catch (error) {
+      console.error('Failed to import content:', error);
       return false;
     }
   };
@@ -61,6 +79,20 @@ export const ContentProvider = ({ children }) => {
   const hasCustomContent = (theme) => {
     return customContent[theme] && Object.keys(customContent[theme]).length > 0;
   };
+
+  // Load content from localStorage on mount
+  React.useEffect(() => {
+    try {
+      const saved = localStorage.getItem('customContent');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        setCustomContent(parsed);
+        console.log('Loaded custom content from localStorage:', parsed);
+      }
+    } catch (error) {
+      console.error('Failed to load custom content:', error);
+    }
+  }, []);
 
   const value = {
     customContent,

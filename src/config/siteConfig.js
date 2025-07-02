@@ -1,8 +1,8 @@
-// Site Configuration - Easy to modify for different deployments
+// Site Configuration - Easily customizable for different deployments
 export const SITE_CONFIG = {
   // Main site branding
   name: "Digital Escape Room Platform",
-  title: "Professional Digital Escape Room Experience",
+  title: "Professional Digital Escape Room Experience", 
   shortName: "Escape Room Platform",
   
   // Navigation branding
@@ -27,13 +27,13 @@ export const SITE_CONFIG = {
       description: 'Solve a classic whodunit in a Victorian mansion'
     },
     'haunted-mansion': {
-      name: 'Haunted Mansion', 
-      title: 'Cursed Manor',
+      name: 'Haunted Mansion',
+      title: 'Cursed Manor', 
       description: 'Escape from a supernatural mansion filled with ghosts and dark secrets'
     },
     'wizards-tower': {
       name: 'Wizard\'s Tower',
-      title: 'The Enchanted Tower', 
+      title: 'The Enchanted Tower',
       description: 'Master magical spells and overcome mystical challenges'
     }
   },

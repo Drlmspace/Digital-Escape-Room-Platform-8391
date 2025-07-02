@@ -4,11 +4,13 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Play, Users, Search, Skull, Wand2 } from 'lucide-react';
 import { useGame } from '../providers/GameProvider';
 import { useAccessibility } from '../providers/AccessibilityProvider';
+import { useContent } from '../providers/ContentProvider';
 
 const SetupInterface = () => {
   const navigate = useNavigate();
   const { initializeSession } = useGame();
   const { announceToScreenReader } = useAccessibility();
+  const { getContent } = useContent();
 
   const [config, setConfig] = useState({
     theme: 'murder-mystery',
@@ -16,37 +18,60 @@ const SetupInterface = () => {
     teamName: ''
   });
 
-  const themes = [
-    {
-      id: 'murder-mystery',
-      name: 'The Midnight Murder',
-      description: 'Solve a classic whodunit in a Victorian mansion. Examine evidence, interview suspects, and catch the killer.',
-      difficulty: 'Adaptive',
-      duration: '60 minutes',
-      icon: Search,
-      atmosphere: 'Detective noir with period props',
-      features: ['Crime scene investigation', 'Forensic evidence', 'Suspect interviews', 'Timeline reconstruction']
-    },
-    {
-      id: 'haunted-mansion',
-      name: 'Cursed Manor',
-      description: 'Escape from a supernatural mansion filled with ghosts, curses, and dark family secrets.',
-      difficulty: 'Adaptive',
-      duration: '60 minutes',
-      icon: Skull,
-      atmosphere: 'Gothic horror with jump scares',
-      features: ['Paranormal investigation', 'Séance rituals', 'Cursed artifacts', 'Spirit communication']
-    },
-    {
-      id: 'wizards-tower',
-      name: 'The Enchanted Tower',
-      description: 'Master magical spells, brew potions, and overcome mystical challenges in a wizard\'s tower.',
-      difficulty: 'Adaptive',
-      duration: '60 minutes',
-      icon: Wand2,
-      atmosphere: 'Magical fantasy with enchanted elements',
-      features: ['Spell casting', 'Potion brewing', 'Ancient riddles', 'Magical artifacts']
+  // Get custom content for themes
+  const getThemeInfo = (themeId) => {
+    const customContent = getContent(themeId, 'gameInfo');
+    
+    const defaultThemes = {
+      'murder-mystery': {
+        id: 'murder-mystery',
+        name: 'The Midnight Murder',
+        description: 'Solve a classic whodunit in a Victorian mansion. Examine evidence, interview suspects, and catch the killer.',
+        difficulty: 'Adaptive',
+        duration: '60 minutes',
+        icon: Search,
+        atmosphere: 'Detective noir with period props',
+        features: ['Crime scene investigation', 'Forensic evidence', 'Suspect interviews', 'Timeline reconstruction']
+      },
+      'haunted-mansion': {
+        id: 'haunted-mansion',
+        name: 'Cursed Manor',
+        description: 'Escape from a supernatural mansion filled with ghosts, curses, and dark family secrets.',
+        difficulty: 'Adaptive',
+        duration: '60 minutes',
+        icon: Skull,
+        atmosphere: 'Gothic horror with jump scares',
+        features: ['Paranormal investigation', 'Séance rituals', 'Cursed artifacts', 'Spirit communication']
+      },
+      'wizards-tower': {
+        id: 'wizards-tower',
+        name: 'The Enchanted Tower',
+        description: 'Master magical spells, brew potions, and overcome mystical challenges in a wizard\'s tower.',
+        difficulty: 'Adaptive',
+        duration: '60 minutes',
+        icon: Wand2,
+        atmosphere: 'Magical fantasy with enchanted elements',
+        features: ['Spell casting', 'Potion brewing', 'Ancient riddles', 'Magical artifacts']
+      }
+    };
+    
+    const defaultTheme = defaultThemes[themeId];
+    
+    if (customContent) {
+      return {
+        ...defaultTheme,
+        name: customContent.gameTitle || defaultTheme.name,
+        description: customContent.gameDescription || defaultTheme.description
+      };
     }
+    
+    return defaultTheme;
+  };
+
+  const themes = [
+    getThemeInfo('murder-mystery'),
+    getThemeInfo('haunted-mansion'),
+    getThemeInfo('wizards-tower')
   ];
 
   const difficulties = [
@@ -297,13 +322,13 @@ const SetupInterface = () => {
           >
             <Play className="w-6 h-6" aria-hidden="true" />
             {config.teamName.trim() 
-              ? `Enter the ${themes.find(t => t.id === config.theme)?.name}` 
+              ? `Enter ${themes.find(t => t.id === config.theme)?.name}` 
               : 'Enter Team Name to Continue'
             }
           </motion.button>
           <p className="text-gray-400 mt-4 text-sm">
             {config.teamName.trim() 
-              ? 'Your adventure will begin immediately with a brief introduction'
+              ? 'Your adventure will begin immediately with a brief introduction' 
               : 'Please enter a team name above to start your adventure'
             }
           </p>

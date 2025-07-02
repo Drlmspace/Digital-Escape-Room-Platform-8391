@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { Play, Users, Settings, BarChart3, Shield, Zap } from 'lucide-react';
@@ -8,6 +8,33 @@ import { SITE_CONFIG } from '../config/siteConfig';
 const LandingPage = () => {
   const navigate = useNavigate();
   const { announceToScreenReader } = useAccessibility();
+  const [siteConfig, setSiteConfig] = useState(SITE_CONFIG);
+
+  // Listen for site settings updates
+  useEffect(() => {
+    const handleSettingsUpdate = () => {
+      setSiteConfig({ ...SITE_CONFIG });
+    };
+
+    window.addEventListener('siteSettingsUpdated', handleSettingsUpdate);
+    
+    // Load saved settings on mount
+    const savedSettings = localStorage.getItem('siteSettings');
+    if (savedSettings) {
+      try {
+        const parsed = JSON.parse(savedSettings);
+        Object.assign(SITE_CONFIG, parsed);
+        setSiteConfig({ ...SITE_CONFIG });
+        document.title = parsed.title;
+      } catch (error) {
+        console.error('Failed to load saved settings:', error);
+      }
+    }
+
+    return () => {
+      window.removeEventListener('siteSettingsUpdated', handleSettingsUpdate);
+    };
+  }, []);
 
   const features = [
     {
@@ -17,7 +44,7 @@ const LandingPage = () => {
     },
     {
       icon: Users,
-      title: 'Team Collaboration', 
+      title: 'Team Collaboration',
       description: 'Built for 1-10 players with role-based challenges and communication tools'
     },
     {
@@ -64,7 +91,7 @@ const LandingPage = () => {
             animate={{ opacity: 1, x: 0 }}
             className="text-2xl font-bold text-white"
           >
-            {SITE_CONFIG.navTitle}
+            {siteConfig.navTitle}
           </motion.div>
           <motion.button
             initial={{ opacity: 0, x: 20 }}
@@ -87,13 +114,13 @@ const LandingPage = () => {
             className="text-center mb-16"
           >
             <h1 className="text-4xl md:text-6xl font-bold text-white mb-6">
-              {SITE_CONFIG.title}
+              {siteConfig.title}
               <span className="block text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">
                 Experience
               </span>
             </h1>
             <p className="text-lg md:text-xl text-gray-300 mb-8 max-w-3xl mx-auto leading-relaxed">
-              {SITE_CONFIG.description}
+              {siteConfig.description}
             </p>
             <motion.button
               whileHover={{ scale: 1.05 }}
@@ -151,7 +178,7 @@ const LandingPage = () => {
                 Explore our fully functional escape room with three immersive themes: Murder Mystery, Haunted Mansion, and Wizard's Tower. Each features unique puzzles, progressive hints, and accessible design for all players.
               </p>
               <div className="grid md:grid-cols-3 gap-6 mt-8">
-                {Object.entries(SITE_CONFIG.themes).map(([key, theme]) => (
+                {Object.entries(siteConfig.themes).map(([key, theme]) => (
                   <div key={key} className="bg-red-500/10 border border-red-500/20 rounded-lg p-4">
                     <h3 className="text-lg font-semibold text-red-300 mb-2">{theme.name}</h3>
                     <p className="text-gray-400 text-sm">{theme.description}</p>
