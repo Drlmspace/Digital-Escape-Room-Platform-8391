@@ -48,6 +48,7 @@ function App() {
                   <Route path="/" element={<LandingPage />} />
                   <Route path="/setup" element={<SetupInterface />} />
                   <Route path="/game/:sessionId" element={<PlayerInterface />} />
+                  <Route path="/admin" element={<AdminLogin />} />
                   <Route path="/admin/login" element={<AdminLogin />} />
                   <Route path="/admin/dashboard" element={<AdminDashboard />} />
                 </Routes>

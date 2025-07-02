@@ -17,7 +17,7 @@ const LandingPage = () => {
     };
 
     window.addEventListener('siteSettingsUpdated', handleSettingsUpdate);
-    
+
     // Load saved settings on mount
     const savedSettings = localStorage.getItem('siteSettings');
     if (savedSettings) {
@@ -78,7 +78,7 @@ const LandingPage = () => {
     announceToScreenReader('Accessing admin dashboard');
     sessionStorage.setItem('adminAuthenticated', 'true');
     sessionStorage.setItem('adminUser', 'Admin');
-    navigate('/admin/demo');
+    navigate('/admin/dashboard');
   };
 
   return (
@@ -172,7 +172,7 @@ const LandingPage = () => {
           >
             <div className="bg-gradient-to-r from-green-500/20 to-blue-500/20 backdrop-blur-sm rounded-xl p-8 border border-green-500/30">
               <h2 className="text-2xl font-bold text-white mb-4">
-                Interactive Demo Experience
+                Interactive Escape Room Experience
               </h2>
               <p className="text-gray-300 max-w-3xl mx-auto leading-relaxed mb-6">
                 Explore our fully functional escape room with three immersive themes: Murder Mystery, Haunted Mansion, and Wizard's Tower. Each features unique puzzles, progressive hints, and accessible design for all players.

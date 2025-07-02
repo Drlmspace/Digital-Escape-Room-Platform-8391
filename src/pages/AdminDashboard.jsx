@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Users, Clock, Lightbulb, Settings, Send, Play, Pause, BarChart3, Eye, MessageSquare, ArrowLeft, Home, LogOut, X, Key, Edit, FileText, Download, Upload, RotateCcw, Globe, User, Activity, Target } from 'lucide-react';
 import { useAdmin } from '../providers/AdminProvider';
 import { useContent } from '../providers/ContentProvider';
@@ -184,7 +184,7 @@ const AdminDashboard = () => {
 
   return (
     <ProtectedAdminRoute>
-      <div className="min-h-screen p-6">
+      <div className="min-h-screen p-6 bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
         <div className="max-w-7xl mx-auto">
           {/* Header with Navigation */}
           <motion.div
