@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useParams, useNavigate } from 'react-router-dom';
-import ReactECharts from 'echarts-for-react';
 import { Users, Clock, Lightbulb, Settings, Send, Plus, Minus, Play, Pause, BarChart3, Eye, MessageSquare, ArrowLeft, Home, LogOut, X, Key, Edit, FileText, Download, Upload, RotateCcw } from 'lucide-react';
 import { useAdmin } from '../providers/AdminProvider';
 import { useContent } from '../providers/ContentProvider';
@@ -15,7 +14,7 @@ const AdminDashboard = () => {
   const navigate = useNavigate();
   const { sendHint, adjustDifficulty, extendTime, broadcastMessage, getTeamAnalytics } = useAdmin();
   const { getAllContent, updateContent, exportContent, importContent, resetContent, hasCustomContent } = useContent();
-  
+
   const [teams] = useState([
     {
       id: 'team-alpha',
@@ -158,54 +157,50 @@ const AdminDashboard = () => {
     }
   };
 
-  // Analytics Chart Data
-  const getProgressChartOptions = () => ({
-    title: {
-      text: 'Team Progress Overview',
-      textStyle: { color: '#ffffff' }
-    },
-    backgroundColor: 'transparent',
-    tooltip: {
-      trigger: 'axis',
-      backgroundColor: '#1e293b',
-      borderColor: '#3b82f6',
-      textStyle: { color: '#ffffff' }
-    },
-    legend: {
-      data: teams.map(team => team.name),
-      textStyle: { color: '#ffffff' }
-    },
-    xAxis: {
-      type: 'category',
-      data: ['Stage 1', 'Stage 2', 'Stage 3', 'Stage 4', 'Stage 5', 'Stage 6'],
-      axisLine: { lineStyle: { color: '#64748b' } },
-      axisLabel: { color: '#94a3b8' }
-    },
-    yAxis: {
-      type: 'value',
-      max: 100,
-      axisLine: { lineStyle: { color: '#64748b' } },
-      axisLabel: { color: '#94a3b8' },
-      splitLine: { lineStyle: { color: '#334155' } }
-    },
-    series: teams.map((team, index) => ({
-      name: team.name,
-      type: 'line',
-      data: generateProgressData(team),
-      lineStyle: { color: ['#3b82f6', '#10b981', '#f59e0b'][index] },
-      itemStyle: { color: ['#3b82f6', '#10b981', '#f59e0b'][index] }
-    }))
-  });
-
-  const generateProgressData = (team) => {
-    const data = new Array(6).fill(0);
-    for (let i = 0; i < team.currentStage - 1; i++) {
-      data[i] = 100;
-    }
-    if (team.currentStage <= 6) {
-      data[team.currentStage - 1] = team.progress;
-    }
-    return data;
+  // Simple Progress Chart Component
+  const ProgressChart = ({ teams }) => {
+    const maxProgress = 100;
+    
+    return (
+      <div className="bg-slate-700/50 rounded-xl p-6">
+        <h3 className="text-xl font-bold text-white mb-4">Team Progress Overview</h3>
+        <div className="space-y-4">
+          {teams.map((team, index) => (
+            <div key={team.id} className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-white font-medium">{team.name}</span>
+                <span className="text-gray-400 text-sm">Stage {team.currentStage}/6 ({team.progress}%)</span>
+              </div>
+              <div className="w-full bg-gray-700 rounded-full h-3">
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: `${(team.progress / maxProgress) * 100}%` }}
+                  transition={{ duration: 1, delay: index * 0.2 }}
+                  className={`h-3 rounded-full ${
+                    index === 0 ? 'bg-blue-500' : 
+                    index === 1 ? 'bg-green-500' : 'bg-yellow-500'
+                  }`}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="mt-4 grid grid-cols-3 gap-4 text-center">
+          <div>
+            <div className="text-2xl font-bold text-blue-400">67%</div>
+            <div className="text-gray-400 text-sm">Avg Progress</div>
+          </div>
+          <div>
+            <div className="text-2xl font-bold text-green-400">3.2</div>
+            <div className="text-gray-400 text-sm">Avg Stage</div>
+          </div>
+          <div>
+            <div className="text-2xl font-bold text-yellow-400">2.3</div>
+            <div className="text-gray-400 text-sm">Avg Hints</div>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   const handleSendHint = () => {
@@ -249,6 +244,7 @@ const AdminDashboard = () => {
                   Session Active
                 </span>
                 <span className="text-gray-400">Session: {sessionId}</span>
+                
                 {/* Navigation Controls */}
                 <div className="flex items-center gap-2 ml-4">
                   <button
@@ -429,11 +425,8 @@ const AdminDashboard = () => {
                 </div>
               </div>
 
-              {/* Analytics Chart */}
-              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6">
-                <h3 className="text-xl font-bold text-white mb-4">Progress Analytics</h3>
-                <ReactECharts option={getProgressChartOptions()} style={{ height: '300px' }} theme="dark" />
-              </div>
+              {/* Progress Chart */}
+              <ProgressChart teams={teams} />
             </motion.div>
 
             {/* Control Panel */}
@@ -464,7 +457,6 @@ const AdminDashboard = () => {
                       <option value="wizards-tower" className="bg-slate-800">Wizard's Tower</option>
                     </select>
                   </div>
-
                   <div className="grid grid-cols-2 gap-2">
                     <button
                       onClick={() => openContentEditor(selectedTheme)}
@@ -482,7 +474,6 @@ const AdminDashboard = () => {
                       Export
                     </button>
                   </div>
-
                   <div>
                     <input
                       type="file"
@@ -509,7 +500,6 @@ const AdminDashboard = () => {
                       </button>
                     </div>
                   </div>
-
                   {importFile && (
                     <button
                       onClick={handleImportContent}
@@ -518,7 +508,6 @@ const AdminDashboard = () => {
                       Import "{importFile.name}"
                     </button>
                   )}
-
                   {hasCustomContent(selectedTheme) && (
                     <div className="text-xs text-green-300 bg-green-500/10 border border-green-500/20 rounded p-2">
                       ✓ Custom content active for {selectedTheme.replace('-', ' ')}
