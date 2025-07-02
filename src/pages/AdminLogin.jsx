@@ -11,14 +11,12 @@ const AdminLogin = () => {
   // Auto-login on page load
   useEffect(() => {
     announceToScreenReader('Accessing admin dashboard automatically...');
-    
     // Set admin session immediately
     sessionStorage.setItem('adminAuthenticated', 'true');
     sessionStorage.setItem('adminUser', 'Admin');
-    
     // Redirect to admin dashboard after brief delay
     setTimeout(() => {
-      navigate('/admin/demo');
+      navigate('/admin/dashboard');
     }, 1000);
   }, [navigate, announceToScreenReader]);
 
@@ -31,7 +29,7 @@ const AdminLogin = () => {
     announceToScreenReader('Accessing admin dashboard...');
     sessionStorage.setItem('adminAuthenticated', 'true');
     sessionStorage.setItem('adminUser', 'Admin');
-    navigate('/admin/demo');
+    navigate('/admin/dashboard');
   };
 
   return (

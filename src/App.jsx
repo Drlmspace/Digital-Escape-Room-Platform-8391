@@ -49,7 +49,7 @@ function App() {
                   <Route path="/setup" element={<SetupInterface />} />
                   <Route path="/game/:sessionId" element={<PlayerInterface />} />
                   <Route path="/admin/login" element={<AdminLogin />} />
-                  <Route path="/admin/:sessionId" element={<AdminDashboard />} />
+                  <Route path="/admin/dashboard" element={<AdminDashboard />} />
                 </Routes>
               </div>
             </Router>

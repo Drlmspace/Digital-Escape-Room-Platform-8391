@@ -24,12 +24,10 @@ const MusicController = ({ isAdmin = false }) => {
       >
         <div className="flex items-center gap-3">
           <Music className="w-5 h-5 text-purple-400" />
-          
           <div className="min-w-0 flex-1">
             <div className="text-sm text-white">Background Music</div>
-            <div className="text-xs text-gray-400">Demo Mode</div>
+            <div className="text-xs text-gray-400">Production Mode</div>
           </div>
-
           <button
             onClick={togglePlay}
             className="p-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors"
@@ -37,7 +35,6 @@ const MusicController = ({ isAdmin = false }) => {
           >
             {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
           </button>
-
           <button
             onClick={toggleMute}
             className="p-2 text-gray-400 hover:text-white transition-colors rounded-lg hover:bg-white/10"
@@ -45,7 +42,6 @@ const MusicController = ({ isAdmin = false }) => {
           >
             {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
           </button>
-
           <input
             type="range"
             min="0"

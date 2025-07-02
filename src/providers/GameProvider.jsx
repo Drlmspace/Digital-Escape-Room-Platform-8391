@@ -124,7 +124,6 @@ export const GameProvider = ({ children }) => {
       timer = setInterval(() => {
         const newTime = state.timeRemaining - 1;
         dispatch({ type: 'UPDATE_TIME', payload: newTime });
-        
         if (newTime <= 0) {
           dispatch({ type: 'COMPLETE_GAME' });
         }
@@ -144,13 +143,12 @@ export const GameProvider = ({ children }) => {
 
   const initializeSession = useCallback(async (config) => {
     dispatch({ type: 'SET_LOADING', payload: true });
-    
     try {
       const sessionId = `session_${Date.now()}`;
       const hintsAvailable = config.difficulty === 'easy' ? 5 : 
                            config.difficulty === 'medium' ? 3 : 1;
       const timeRemaining = config.difficulty === 'easy' ? 5400 : 
-                          config.difficulty === 'medium' ? 3600 : 2880;
+                           config.difficulty === 'medium' ? 3600 : 2880;
 
       dispatch({
         type: 'INITIALIZE_SESSION',
@@ -177,15 +175,14 @@ export const GameProvider = ({ children }) => {
 
   const loadTeamBySessionId = useCallback(async (sessionId) => {
     dispatch({ type: 'SET_LOADING', payload: true });
-    
     try {
-      // Demo data for the session
+      // Production data for the session
       dispatch({
         type: 'LOAD_TEAM_DATA',
         payload: {
           sessionId: sessionId,
-          teamId: `demo_${sessionId}`,
-          teamName: 'Demo Team',
+          teamId: `team_${sessionId}`,
+          teamName: 'Production Team',
           theme: 'murder-mystery',
           difficulty: 'medium',
           currentStage: 1,

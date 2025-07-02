@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Users, Clock, Lightbulb, Settings, Send, Plus, Minus, Play, Pause, BarChart3, Eye, MessageSquare, ArrowLeft, Home, LogOut, X, Key, Edit, FileText, Download, Upload, RotateCcw, Globe } from 'lucide-react';
+import { Users, Clock, Lightbulb, Settings, Send, Play, Pause, BarChart3, Eye, MessageSquare, ArrowLeft, Home, LogOut, X, Key, Edit, FileText, Download, Upload, RotateCcw, Globe, User, Activity, Target } from 'lucide-react';
 import { useAdmin } from '../providers/AdminProvider';
 import { useContent } from '../providers/ContentProvider';
 import { SITE_CONFIG } from '../config/siteConfig';
@@ -12,51 +12,24 @@ import MusicController from '../components/MusicController';
 import ProtectedAdminRoute from '../components/ProtectedAdminRoute';
 
 const AdminDashboard = () => {
-  const { sessionId } = useParams();
   const navigate = useNavigate();
   const { sendHint, adjustDifficulty, extendTime, broadcastMessage, getTeamAnalytics } = useAdmin();
   const { getAllContent, updateContent, exportContent, importContent, resetContent, hasCustomContent } = useContent();
-  
-  const [teams] = useState([
-    {
-      id: 'team-alpha',
-      name: 'Team Alpha',
-      players: 4,
-      currentStage: 3,
-      progress: 45,
-      timeRemaining: 2145,
-      hintsUsed: 2,
-      status: 'active',
-      difficulty: 'medium',
-      theme: 'murder-mystery'
-    },
-    {
-      id: 'team-beta',
-      name: 'Team Beta',
-      players: 6,
-      currentStage: 2,
-      progress: 78,
-      timeRemaining: 2890,
-      hintsUsed: 1,
-      status: 'active',
-      difficulty: 'difficult',
-      theme: 'haunted-mansion'
-    },
-    {
-      id: 'team-gamma',
-      name: 'Team Gamma',
-      players: 3,
-      currentStage: 4,
-      progress: 23,
-      timeRemaining: 1567,
-      hintsUsed: 4,
-      status: 'struggling',
-      difficulty: 'easy',
-      theme: 'wizards-tower'
-    }
-  ]);
 
-  const [selectedTeam, setSelectedTeam] = useState(teams[0]?.id);
+  // Single team state instead of multiple teams
+  const [currentTeam] = useState({
+    id: 'active-team',
+    name: 'Current Team',
+    players: 4,
+    currentStage: 3,
+    progress: 45,
+    timeRemaining: 2145,
+    hintsUsed: 2,
+    status: 'active',
+    difficulty: 'medium',
+    theme: 'murder-mystery'
+  });
+
   const [customHint, setCustomHint] = useState('');
   const [broadcastMsg, setBroadcastMsg] = useState('');
   const [showExitModal, setShowExitModal] = useState(false);
@@ -66,6 +39,7 @@ const AdminDashboard = () => {
   const [answerKeyStage, setAnswerKeyStage] = useState(1);
   const [selectedTheme, setSelectedTheme] = useState('murder-mystery');
   const [importFile, setImportFile] = useState(null);
+  const [isGamePaused, setIsGamePaused] = useState(false);
   const [siteSettings, setSiteSettings] = useState({
     title: SITE_CONFIG.title,
     shortName: SITE_CONFIG.shortName,
@@ -100,6 +74,7 @@ const AdminDashboard = () => {
       case 'active': return 'text-green-400';
       case 'struggling': return 'text-yellow-400';
       case 'stuck': return 'text-red-400';
+      case 'paused': return 'text-blue-400';
       default: return 'text-gray-400';
     }
   };
@@ -188,55 +163,9 @@ const AdminDashboard = () => {
     window.dispatchEvent(new Event('siteSettingsUpdated'));
   };
 
-  // Simple Progress Chart Component
-  const ProgressChart = ({ teams }) => {
-    const maxProgress = 100;
-    
-    return (
-      <div className="bg-slate-700/50 rounded-xl p-6">
-        <h3 className="text-xl font-bold text-white mb-4">Team Progress Overview</h3>
-        <div className="space-y-4">
-          {teams.map((team, index) => (
-            <div key={team.id} className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-white font-medium">{team.name}</span>
-                <span className="text-gray-400 text-sm">Stage {team.currentStage}/6 ({team.progress}%)</span>
-              </div>
-              <div className="w-full bg-gray-700 rounded-full h-3">
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: `${(team.progress / maxProgress) * 100}%` }}
-                  transition={{ duration: 1, delay: index * 0.2 }}
-                  className={`h-3 rounded-full ${
-                    index === 0 ? 'bg-blue-500' : 
-                    index === 1 ? 'bg-green-500' : 'bg-yellow-500'
-                  }`}
-                />
-              </div>
-            </div>
-          ))}
-        </div>
-        <div className="mt-4 grid grid-cols-3 gap-4 text-center">
-          <div>
-            <div className="text-2xl font-bold text-blue-400">67%</div>
-            <div className="text-gray-400 text-sm">Avg Progress</div>
-          </div>
-          <div>
-            <div className="text-2xl font-bold text-green-400">3.2</div>
-            <div className="text-gray-400 text-sm">Avg Stage</div>
-          </div>
-          <div>
-            <div className="text-2xl font-bold text-yellow-400">2.3</div>
-            <div className="text-gray-400 text-sm">Avg Hints</div>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
   const handleSendHint = () => {
-    if (customHint.trim() && selectedTeam) {
-      sendHint(selectedTeam, customHint);
+    if (customHint.trim()) {
+      sendHint(currentTeam.id, customHint);
       setCustomHint('');
     }
   };
@@ -246,6 +175,11 @@ const AdminDashboard = () => {
       broadcastMessage(broadcastMsg);
       setBroadcastMsg('');
     }
+  };
+
+  const toggleGamePause = () => {
+    setIsGamePaused(!isGamePaused);
+    // In a real implementation, this would pause/resume the game timer
   };
 
   return (
@@ -270,13 +204,12 @@ const AdminDashboard = () => {
                 </button>
                 <h1 className="text-3xl font-bold text-white">{siteSettings.adminTitle}</h1>
               </div>
-              
+
               <div className="flex items-center gap-3">
                 <span className="px-3 py-1 bg-green-500/20 text-green-300 rounded-full text-sm">
-                  Session Active
+                  Live Session
                 </span>
-                <span className="text-gray-400">Session: {sessionId}</span>
-                
+
                 {/* Site Settings Button */}
                 <button
                   onClick={() => setShowSiteSettings(true)}
@@ -286,7 +219,7 @@ const AdminDashboard = () => {
                   <Globe className="w-4 h-4" />
                   Site Settings
                 </button>
-                
+
                 {/* Navigation Controls */}
                 <div className="flex items-center gap-2 ml-4">
                   <button
@@ -313,19 +246,19 @@ const AdminDashboard = () => {
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
                 <div className="flex items-center gap-3">
-                  <Users className="w-8 h-8 text-blue-400" />
+                  <User className="w-8 h-8 text-blue-400" />
                   <div>
-                    <div className="text-2xl font-bold text-white">{teams.length}</div>
-                    <div className="text-gray-400 text-sm">Active Teams</div>
+                    <div className="text-2xl font-bold text-white">{currentTeam.players}</div>
+                    <div className="text-gray-400 text-sm">Team Players</div>
                   </div>
                 </div>
               </div>
               <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
                 <div className="flex items-center gap-3">
-                  <BarChart3 className="w-8 h-8 text-green-400" />
+                  <Target className="w-8 h-8 text-green-400" />
                   <div>
-                    <div className="text-2xl font-bold text-white">67%</div>
-                    <div className="text-gray-400 text-sm">Avg Progress</div>
+                    <div className="text-2xl font-bold text-white">{currentTeam.currentStage}/6</div>
+                    <div className="text-gray-400 text-sm">Current Stage</div>
                   </div>
                 </div>
               </div>
@@ -333,8 +266,8 @@ const AdminDashboard = () => {
                 <div className="flex items-center gap-3">
                   <Clock className="w-8 h-8 text-yellow-400" />
                   <div>
-                    <div className="text-2xl font-bold text-white">34:12</div>
-                    <div className="text-gray-400 text-sm">Avg Time</div>
+                    <div className="text-2xl font-bold text-white">{formatTime(currentTeam.timeRemaining)}</div>
+                    <div className="text-gray-400 text-sm">Time Remaining</div>
                   </div>
                 </div>
               </div>
@@ -342,8 +275,8 @@ const AdminDashboard = () => {
                 <div className="flex items-center gap-3">
                   <Lightbulb className="w-8 h-8 text-purple-400" />
                   <div>
-                    <div className="text-2xl font-bold text-white">2.3</div>
-                    <div className="text-gray-400 text-sm">Avg Hints</div>
+                    <div className="text-2xl font-bold text-white">{currentTeam.hintsUsed}</div>
+                    <div className="text-gray-400 text-sm">Hints Used</div>
                   </div>
                 </div>
               </div>
@@ -351,126 +284,145 @@ const AdminDashboard = () => {
           </motion.div>
 
           <div className="grid lg:grid-cols-3 gap-6">
-            {/* Teams Overview */}
+            {/* Team Overview */}
             <motion.div
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               className="lg:col-span-2"
             >
+              {/* Current Team Status */}
               <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 mb-6">
-                <h2 className="text-2xl font-bold text-white mb-6">Team Monitoring</h2>
-                <div className="space-y-4">
-                  {teams.map((team) => (
-                    <motion.div
-                      key={team.id}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className={`p-4 rounded-xl border-2 transition-all duration-300 cursor-pointer ${
-                        selectedTeam === team.id
-                          ? 'border-blue-400 bg-blue-500/10'
-                          : 'border-transparent bg-white/5 hover:bg-white/10'
-                      }`}
-                      onClick={() => setSelectedTeam(team.id)}
+                <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
+                  <Activity className="w-6 h-6" />
+                  Team Monitoring
+                </h2>
+                
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="p-6 rounded-xl border-2 border-blue-500/40 bg-blue-500/10"
+                >
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <h3 className="text-2xl font-semibold text-white">{currentTeam.name}</h3>
+                      <span className={`px-3 py-1 rounded-full text-sm ${getDifficultyColor(currentTeam.difficulty)}`}>
+                        {currentTeam.difficulty}
+                      </span>
+                      <span className={`px-3 py-1 rounded-full text-sm ${getThemeColor(currentTeam.theme)}`}>
+                        {currentTeam.theme.replace('-', ' ')}
+                      </span>
+                      <span className={`text-lg font-medium ${getStatusColor(isGamePaused ? 'paused' : currentTeam.status)}`}>
+                        {isGamePaused ? 'Paused' : currentTeam.status}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-4 text-sm text-gray-400">
+                      <span>{currentTeam.players} players</span>
+                      <span>Stage {currentTeam.currentStage}/6</span>
+                      <span>{formatTime(currentTeam.timeRemaining)}</span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-4 mb-4">
+                    <div className="flex-1">
+                      <div className="flex justify-between text-sm text-gray-400 mb-1">
+                        <span>Progress</span>
+                        <span>{currentTeam.progress}%</span>
+                      </div>
+                      <div className="w-full bg-gray-700 rounded-full h-3">
+                        <motion.div
+                          initial={{ width: 0 }}
+                          animate={{ width: `${currentTeam.progress}%` }}
+                          transition={{ duration: 1, delay: 0.2 }}
+                          className="bg-gradient-to-r from-blue-500 to-purple-600 h-3 rounded-full"
+                        />
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-sm text-gray-400">Hints Used</div>
+                      <div className="text-xl font-semibold text-white">{currentTeam.hintsUsed}</div>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      onClick={() => openAnswerKey(currentTeam.currentStage)}
+                      className="px-4 py-2 bg-yellow-500/20 text-yellow-300 rounded-lg hover:bg-yellow-500/30 transition-colors text-sm flex items-center gap-2"
                     >
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-3">
-                          <h3 className="text-xl font-semibold text-white">{team.name}</h3>
-                          <span className={`px-2 py-1 rounded-full text-xs ${getDifficultyColor(team.difficulty)}`}>
-                            {team.difficulty}
-                          </span>
-                          <span className={`px-2 py-1 rounded-full text-xs ${getThemeColor(team.theme)}`}>
-                            {team.theme.replace('-', ' ')}
-                          </span>
-                          <span className={`text-sm ${getStatusColor(team.status)}`}>
-                            {team.status}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-4 text-sm text-gray-400">
-                          <span>{team.players} players</span>
-                          <span>Stage {team.currentStage}/6</span>
-                          <span>{formatTime(team.timeRemaining)}</span>
-                        </div>
-                      </div>
+                      <Key className="w-4 h-4" />
+                      Stage {currentTeam.currentStage} Answers
+                    </button>
+                    <button
+                      onClick={() => openContentEditor(currentTeam.theme)}
+                      className="px-4 py-2 bg-green-500/20 text-green-300 rounded-lg hover:bg-green-500/30 transition-colors text-sm flex items-center gap-2"
+                    >
+                      <Edit className="w-4 h-4" />
+                      Edit Content
+                    </button>
+                    <button
+                      onClick={() => extendTime(currentTeam.id, 10)}
+                      className="px-4 py-2 bg-green-500/20 text-green-300 rounded-lg hover:bg-green-500/30 transition-colors text-sm flex items-center gap-2"
+                    >
+                      <Clock className="w-4 h-4" />
+                      +10 Minutes
+                    </button>
+                    <button
+                      onClick={toggleGamePause}
+                      className={`px-4 py-2 rounded-lg transition-colors text-sm flex items-center gap-2 ${
+                        isGamePaused 
+                          ? 'bg-green-500/20 text-green-300 hover:bg-green-500/30' 
+                          : 'bg-yellow-500/20 text-yellow-300 hover:bg-yellow-500/30'
+                      }`}
+                    >
+                      {isGamePaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
+                      {isGamePaused ? 'Resume Game' : 'Pause Game'}
+                    </button>
+                  </div>
+                </motion.div>
+              </div>
 
-                      <div className="flex items-center gap-4 mb-3">
-                        <div className="flex-1">
-                          <div className="flex justify-between text-sm text-gray-400 mb-1">
-                            <span>Progress</span>
-                            <span>{team.progress}%</span>
-                          </div>
-                          <div className="w-full bg-gray-700 rounded-full h-2">
-                            <motion.div
-                              initial={{ width: 0 }}
-                              animate={{ width: `${team.progress}%` }}
-                              transition={{ duration: 1, delay: 0.2 }}
-                              className="bg-gradient-to-r from-blue-500 to-purple-600 h-2 rounded-full"
-                            />
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <div className="text-sm text-gray-400">Hints Used</div>
-                          <div className="text-lg font-semibold text-white">{team.hintsUsed}</div>
+              {/* Team Progress Chart */}
+              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6">
+                <h3 className="text-xl font-bold text-white mb-4">Stage Progress Overview</h3>
+                <div className="space-y-4">
+                  {Array.from({ length: 6 }, (_, i) => i + 1).map((stage) => (
+                    <div key={stage} className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-white font-medium">Stage {stage}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-gray-400 text-sm">
+                            {stage <= currentTeam.currentStage ? 
+                              (stage < currentTeam.currentStage ? '100%' : `${currentTeam.progress}%`) : 
+                              '0%'
+                            }
+                          </span>
+                          <button
+                            onClick={() => openAnswerKey(stage)}
+                            className="px-2 py-1 bg-yellow-500/20 text-yellow-300 rounded text-xs hover:bg-yellow-500/30 transition-colors"
+                          >
+                            Answers
+                          </button>
                         </div>
                       </div>
-
-                      <div className="flex gap-2">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
+                      <div className="w-full bg-gray-700 rounded-full h-2">
+                        <motion.div
+                          initial={{ width: 0 }}
+                          animate={{ 
+                            width: stage <= currentTeam.currentStage ? 
+                              (stage < currentTeam.currentStage ? '100%' : `${currentTeam.progress}%`) : 
+                              '0%'
                           }}
-                          className="px-3 py-1 bg-blue-500/20 text-blue-300 rounded-lg hover:bg-blue-500/30 transition-colors text-sm flex items-center gap-1"
-                        >
-                          <Eye className="w-4 h-4" />
-                          View
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            openAnswerKey(team.currentStage);
-                          }}
-                          className="px-3 py-1 bg-yellow-500/20 text-yellow-300 rounded-lg hover:bg-yellow-500/30 transition-colors text-sm flex items-center gap-1"
-                        >
-                          <Key className="w-4 h-4" />
-                          Answers
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            openContentEditor(team.theme);
-                          }}
-                          className="px-3 py-1 bg-green-500/20 text-green-300 rounded-lg hover:bg-green-500/30 transition-colors text-sm flex items-center gap-1"
-                        >
-                          <Edit className="w-4 h-4" />
-                          Edit Content
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            extendTime(team.id, 10);
-                          }}
-                          className="px-3 py-1 bg-green-500/20 text-green-300 rounded-lg hover:bg-green-500/30 transition-colors text-sm flex items-center gap-1"
-                        >
-                          <Plus className="w-4 h-4" />
-                          +10min
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            adjustDifficulty(team.id, 'easier');
-                          }}
-                          className="px-3 py-1 bg-purple-500/20 text-purple-300 rounded-lg hover:bg-purple-500/30 transition-colors text-sm flex items-center gap-1"
-                        >
-                          <Settings className="w-4 h-4" />
-                          Adjust
-                        </button>
+                          transition={{ duration: 1, delay: stage * 0.1 }}
+                          className={`h-2 rounded-full ${
+                            stage < currentTeam.currentStage ? 'bg-green-500' :
+                            stage === currentTeam.currentStage ? 'bg-blue-500' :
+                            'bg-gray-600'
+                          }`}
+                        />
                       </div>
-                    </motion.div>
+                    </div>
                   ))}
                 </div>
               </div>
-
-              {/* Progress Chart */}
-              <ProgressChart teams={teams} />
             </motion.div>
 
             {/* Control Panel */}
@@ -485,6 +437,7 @@ const AdminDashboard = () => {
                   <FileText className="w-5 h-5" />
                   Content Management
                 </h3>
+                
                 <div className="space-y-4">
                   <div>
                     <label htmlFor="theme-select" className="block text-sm text-gray-400 mb-2">
@@ -501,7 +454,7 @@ const AdminDashboard = () => {
                       ))}
                     </select>
                   </div>
-                  
+
                   <div className="grid grid-cols-2 gap-2">
                     <button
                       onClick={() => openContentEditor(selectedTheme)}
@@ -519,7 +472,7 @@ const AdminDashboard = () => {
                       Export
                     </button>
                   </div>
-                  
+
                   <div>
                     <input
                       type="file"
@@ -546,7 +499,7 @@ const AdminDashboard = () => {
                       </button>
                     </div>
                   </div>
-                  
+
                   {importFile && (
                     <button
                       onClick={handleImportContent}
@@ -555,7 +508,7 @@ const AdminDashboard = () => {
                       Import "{importFile.name}"
                     </button>
                   )}
-                  
+
                   {hasCustomContent(selectedTheme) && (
                     <div className="text-xs text-green-300 bg-green-500/10 border border-green-500/20 rounded p-2">
                       Custom content active for {selectedTheme.replace('-', ' ')}
@@ -591,31 +544,14 @@ const AdminDashboard = () => {
                 </h3>
                 <div className="space-y-4">
                   <div>
-                    <label htmlFor="team-select" className="block text-sm text-gray-400 mb-2">
-                      Select Team
-                    </label>
-                    <select
-                      id="team-select"
-                      value={selectedTeam}
-                      onChange={(e) => setSelectedTeam(e.target.value)}
-                      className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-400"
-                    >
-                      {teams.map((team) => (
-                        <option key={team.id} value={team.id} className="bg-slate-800">
-                          {team.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
                     <label htmlFor="custom-hint" className="block text-sm text-gray-400 mb-2">
-                      Custom Hint
+                      Custom Hint for {currentTeam.name}
                     </label>
                     <textarea
                       id="custom-hint"
                       value={customHint}
                       onChange={(e) => setCustomHint(e.target.value)}
-                      placeholder="Write a simple hint in easy words..."
+                      placeholder="Write a helpful hint for the current stage..."
                       className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none"
                       rows="3"
                     />
@@ -626,7 +562,7 @@ const AdminDashboard = () => {
                     className="w-full px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
                   >
                     <Send className="w-4 h-4" />
-                    Send Hint
+                    Send Hint to Team
                   </button>
                 </div>
               </div>
@@ -635,13 +571,13 @@ const AdminDashboard = () => {
               <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6">
                 <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
                   <MessageSquare className="w-5 h-5" />
-                  Broadcast
+                  Team Message
                 </h3>
                 <div className="space-y-4">
                   <textarea
                     value={broadcastMsg}
                     onChange={(e) => setBroadcastMsg(e.target.value)}
-                    placeholder="Send a message to all teams..."
+                    placeholder="Send a message to the team..."
                     className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none"
                     rows="3"
                   />
@@ -651,26 +587,39 @@ const AdminDashboard = () => {
                     className="w-full px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
                   >
                     <Send className="w-4 h-4" />
-                    Send to All Teams
+                    Send to Team
                   </button>
                 </div>
               </div>
 
-              {/* Quick Actions */}
+              {/* Game Controls */}
               <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6">
-                <h3 className="text-xl font-bold text-white mb-4">Quick Actions</h3>
+                <h3 className="text-xl font-bold text-white mb-4">Game Controls</h3>
                 <div className="space-y-3">
-                  <button className="w-full px-4 py-2 bg-yellow-500/20 text-yellow-300 rounded-lg hover:bg-yellow-500/30 transition-colors text-left">
-                    Pause All Teams
+                  <button
+                    onClick={toggleGamePause}
+                    className={`w-full px-4 py-2 rounded-lg transition-colors text-left flex items-center gap-2 ${
+                      isGamePaused 
+                        ? 'bg-green-500/20 text-green-300 hover:bg-green-500/30' 
+                        : 'bg-yellow-500/20 text-yellow-300 hover:bg-yellow-500/30'
+                    }`}
+                  >
+                    {isGamePaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
+                    {isGamePaused ? 'Resume Game' : 'Pause Game'}
                   </button>
-                  <button className="w-full px-4 py-2 bg-green-500/20 text-green-300 rounded-lg hover:bg-green-500/30 transition-colors text-left">
-                    Resume All Teams
+                  <button
+                    onClick={() => extendTime(currentTeam.id, 10)}
+                    className="w-full px-4 py-2 bg-blue-500/20 text-blue-300 rounded-lg hover:bg-blue-500/30 transition-colors text-left flex items-center gap-2"
+                  >
+                    <Clock className="w-4 h-4" />
+                    Add 10 Minutes
                   </button>
-                  <button className="w-full px-4 py-2 bg-blue-500/20 text-blue-300 rounded-lg hover:bg-blue-500/30 transition-colors text-left">
-                    Make Report
-                  </button>
-                  <button className="w-full px-4 py-2 bg-red-500/20 text-red-300 rounded-lg hover:bg-red-500/30 transition-colors text-left">
-                    Emergency Stop
+                  <button
+                    onClick={() => adjustDifficulty(currentTeam.id, 'easier')}
+                    className="w-full px-4 py-2 bg-purple-500/20 text-purple-300 rounded-lg hover:bg-purple-500/30 transition-colors text-left flex items-center gap-2"
+                  >
+                    <Settings className="w-4 h-4" />
+                    Adjust Difficulty
                   </button>
                 </div>
               </div>

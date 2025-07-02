@@ -8,7 +8,7 @@ const ProtectedAdminRoute = ({ children }) => {
 
   // Auto-authenticate if not already authenticated
   const isAuthenticated = sessionStorage.getItem('adminAuthenticated') === 'true';
-  
+
   if (!isAuthenticated) {
     // Auto-set authentication instead of redirecting
     sessionStorage.setItem('adminAuthenticated', 'true');
@@ -23,7 +23,7 @@ const ProtectedAdminRoute = ({ children }) => {
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2 text-green-300 text-sm">
             <Shield className="w-4 h-4" />
-            <span>Admin Dashboard Active - Direct Access Mode</span>
+            <span>Admin Dashboard Active - Production Mode</span>
           </div>
           <button
             onClick={() => {
