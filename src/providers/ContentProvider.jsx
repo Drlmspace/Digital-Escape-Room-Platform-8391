@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { supabase } from '../lib/supabase';
 
 const ContentContext = createContext();
 
@@ -13,29 +14,91 @@ export const useContent = () => {
 export const ContentProvider = ({ children }) => {
   const [customContent, setCustomContent] = useState({});
   const [activeTheme, setActiveTheme] = useState('murder-mystery');
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Load custom content from localStorage on initialization
+  // Load custom content from Supabase on initialization
   useEffect(() => {
-    const savedContent = localStorage.getItem('escaperoom_custom_content');
-    if (savedContent) {
-      try {
-        setCustomContent(JSON.parse(savedContent));
-      } catch (error) {
-        console.error('Failed to load custom content:', error);
-      }
-    }
+    loadCustomContent();
   }, []);
 
-  // Save custom content to localStorage whenever it changes
-  useEffect(() => {
-    localStorage.setItem('escaperoom_custom_content', JSON.stringify(customContent));
-  }, [customContent]);
+  const loadCustomContent = async () => {
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('custom_content_er2024')
+        .select('*');
 
-  const updateContent = (theme, content) => {
+      if (error) throw error;
+
+      const contentByTheme = {};
+      data?.forEach(item => {
+        if (!contentByTheme[item.theme]) {
+          contentByTheme[item.theme] = {};
+        }
+        contentByTheme[item.theme][item.stage_number] = {
+          title: item.title,
+          description: item.description,
+          backstory: item.backstory
+        };
+      });
+
+      setCustomContent(contentByTheme);
+    } catch (error) {
+      console.error('Failed to load custom content:', error);
+      // Fallback to localStorage if Supabase fails
+      const savedContent = localStorage.getItem('escaperoom_custom_content');
+      if (savedContent) {
+        try {
+          setCustomContent(JSON.parse(savedContent));
+        } catch (parseError) {
+          console.error('Failed to parse localStorage content:', parseError);
+        }
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const updateContent = async (theme, content) => {
     setCustomContent(prev => ({
       ...prev,
       [theme]: content
     }));
+
+    // Save to localStorage as backup
+    localStorage.setItem('escaperoom_custom_content', JSON.stringify({
+      ...customContent,
+      [theme]: content
+    }));
+
+    // Save to Supabase
+    try {
+      // Delete existing content for this theme
+      await supabase
+        .from('custom_content_er2024')
+        .delete()
+        .eq('theme', theme);
+
+      // Insert new content
+      const inserts = Object.entries(content).map(([stage, stageContent]) => ({
+        theme,
+        stage_number: parseInt(stage),
+        title: stageContent.title,
+        description: stageContent.description,
+        backstory: stageContent.backstory,
+        created_by: 'Admin'
+      }));
+
+      if (inserts.length > 0) {
+        const { error } = await supabase
+          .from('custom_content_er2024')
+          .insert(inserts);
+
+        if (error) throw error;
+      }
+    } catch (error) {
+      console.error('Failed to save content to Supabase:', error);
+    }
   };
 
   const getContent = (theme, stage) => {
@@ -51,25 +114,50 @@ export const ContentProvider = ({ children }) => {
     return customContent[theme] || getDefaultThemeContent(theme);
   };
 
-  const resetContent = (theme) => {
+  const resetContent = async (theme) => {
     setCustomContent(prev => {
       const newContent = { ...prev };
       delete newContent[theme];
       return newContent;
     });
+
+    // Update localStorage
+    const newContent = { ...customContent };
+    delete newContent[theme];
+    localStorage.setItem('escaperoom_custom_content', JSON.stringify(newContent));
+
+    // Delete from Supabase
+    try {
+      await supabase
+        .from('custom_content_er2024')
+        .delete()
+        .eq('theme', theme);
+    } catch (error) {
+      console.error('Failed to reset content in Supabase:', error);
+    }
   };
 
-  const resetAllContent = () => {
+  const resetAllContent = async () => {
     setCustomContent({});
+    localStorage.removeItem('escaperoom_custom_content');
+
+    // Delete all from Supabase
+    try {
+      await supabase
+        .from('custom_content_er2024')
+        .delete()
+        .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all rows
+    } catch (error) {
+      console.error('Failed to reset all content in Supabase:', error);
+    }
   };
 
   const exportContent = (theme) => {
     const content = customContent[theme];
     if (content) {
       const dataStr = JSON.stringify(content, null, 2);
-      const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+      const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
       const exportFileDefaultName = `${theme}_content.json`;
-      
       const linkElement = document.createElement('a');
       linkElement.setAttribute('href', dataUri);
       linkElement.setAttribute('download', exportFileDefaultName);
@@ -77,13 +165,10 @@ export const ContentProvider = ({ children }) => {
     }
   };
 
-  const importContent = (theme, contentData) => {
+  const importContent = async (theme, contentData) => {
     try {
       const parsedContent = typeof contentData === 'string' ? JSON.parse(contentData) : contentData;
-      setCustomContent(prev => ({
-        ...prev,
-        [theme]: parsedContent
-      }));
+      await updateContent(theme, parsedContent);
       return true;
     } catch (error) {
       console.error('Failed to import content:', error);
@@ -106,7 +191,9 @@ export const ContentProvider = ({ children }) => {
     resetAllContent,
     exportContent,
     importContent,
-    hasCustomContent
+    hasCustomContent,
+    isLoading,
+    loadCustomContent
   };
 
   return (

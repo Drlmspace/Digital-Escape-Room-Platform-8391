@@ -15,24 +15,10 @@ import confetti from 'canvas-confetti';
 const PlayerInterface = () => {
   const { sessionId } = useParams();
   const navigate = useNavigate();
-  const { 
-    currentStage, 
-    totalStages, 
-    timeRemaining, 
-    hintsUsed, 
-    hintsAvailable, 
-    progress, 
-    isCompleted, 
-    advanceStage, 
-    updateProgress, 
-    endGame, 
-    theme,
-    difficulty,
-    teamName,
-    sessionId: gameSessionId,
-    completionTime,
-    goToPreviousStage,
-    goToNextStage
+  const {
+    currentStage, totalStages, timeRemaining, hintsUsed, hintsAvailable, progress, isCompleted, 
+    advanceStage, updateProgress, endGame, theme, difficulty, teamName, sessionId: gameSessionId, 
+    completionTime, goToPreviousStage, goToNextStage, loadTeamBySessionId, isLoading
   } = useGame();
   const { announceToScreenReader } = useAccessibility();
 
@@ -46,6 +32,13 @@ const PlayerInterface = () => {
   const [canAdvance, setCanAdvance] = useState(true);
   const [showCelebration, setShowCelebration] = useState(false);
 
+  // Load team data on mount
+  useEffect(() => {
+    if (sessionId) {
+      loadTeamBySessionId(sessionId);
+    }
+  }, [sessionId, loadTeamBySessionId]);
+
   useEffect(() => {
     if (isCompleted && !showCelebration) {
       // Trigger celebration effects
@@ -54,42 +47,32 @@ const PlayerInterface = () => {
       // Multi-burst confetti celebration
       const duration = 3000;
       const animationEnd = Date.now() + duration;
-      
       const randomInRange = (min, max) => {
         return Math.random() * (max - min) + min;
       };
 
       const interval = setInterval(() => {
         const timeLeft = animationEnd - Date.now();
-
         if (timeLeft <= 0) {
           clearInterval(interval);
           return;
         }
 
         const particleCount = 50 * (timeLeft / duration);
-        
         // Left side burst
         confetti({
           particleCount,
           startVelocity: 30,
           spread: 70,
-          origin: {
-            x: randomInRange(0.1, 0.3),
-            y: Math.random() - 0.2
-          },
+          origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 },
           colors: ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444']
         });
-        
         // Right side burst
         confetti({
           particleCount,
           startVelocity: 30,
           spread: 70,
-          origin: {
-            x: randomInRange(0.7, 0.9),
-            y: Math.random() - 0.2
-          },
+          origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 },
           colors: ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444']
         });
       }, 250);
@@ -135,7 +118,7 @@ const PlayerInterface = () => {
     }
     
     updateProgress(currentStage, 100);
-    
+
     // Check if this was the final stage
     if (currentStage === totalStages) {
       // Final stage completed!
@@ -165,7 +148,7 @@ const PlayerInterface = () => {
     
     updateProgress(currentStage, 100);
     setShowAnswerReveal(false);
-    
+
     // Check if this was the final stage
     if (currentStage === totalStages) {
       // Final stage completed via answer reveal
@@ -291,6 +274,22 @@ const PlayerInterface = () => {
     completionDate: completionTime || new Date().toISOString()
   };
 
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="text-center"
+        >
+          <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-white text-lg">Loading your escape room...</p>
+        </motion.div>
+      </div>
+    );
+  }
+
   if (isCompleted) {
     return (
       <div className="min-h-screen flex items-center justify-center p-6 relative">
@@ -302,19 +301,20 @@ const PlayerInterface = () => {
             transition={{ duration: 2 }}
             className="absolute inset-0 bg-gradient-to-br from-yellow-500/10 via-transparent to-green-500/10"
           />
+          
           {/* Floating celebration elements */}
           {[...Array(20)].map((_, i) => (
             <motion.div
               key={i}
               initial={{ 
-                opacity: 0,
-                x: Math.random() * window.innerWidth,
-                y: window.innerHeight + 100
+                opacity: 0, 
+                x: Math.random() * window.innerWidth, 
+                y: window.innerHeight + 100 
               }}
               animate={{ 
-                opacity: [0, 1, 0],
-                y: -100,
-                x: Math.random() * window.innerWidth
+                opacity: [0, 1, 0], 
+                y: -100, 
+                x: Math.random() * window.innerWidth 
               }}
               transition={{
                 duration: Math.random() * 3 + 2,
@@ -347,17 +347,13 @@ const PlayerInterface = () => {
                 rotate: [0, 10, -10, 0],
                 scale: [1, 1.1, 1, 1.05, 1]
               }}
-              transition={{ 
-                duration: 2,
-                repeat: Infinity,
-                repeatType: "reverse"
-              }}
+              transition={{ duration: 2, repeat: Infinity, repeatType: "reverse" }}
               className="text-8xl mb-6"
             >
               🏆
             </motion.div>
-            
-            <motion.h1 
+
+            <motion.h1
               initial={{ scale: 0.5 }}
               animate={{ scale: 1 }}
               transition={{ delay: 0.5, type: "spring", stiffness: 200 }}
@@ -365,7 +361,7 @@ const PlayerInterface = () => {
             >
               VICTORY!
             </motion.h1>
-            
+
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -384,7 +380,7 @@ const PlayerInterface = () => {
               <h3 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400 mb-6">
                 {themeInfo.celebrationEmoji} {themeInfo.title} {themeInfo.celebrationEmoji}
               </h3>
-              <motion.p 
+              <motion.p
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 1.2 }}
@@ -406,33 +402,21 @@ const PlayerInterface = () => {
               <Trophy className="w-8 h-8 text-yellow-400" />
               🏆 Team {teamName} - VICTORY SUMMARY 🏆
             </h2>
-            
+
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center mb-8">
-              <motion.div
-                whileHover={{ scale: 1.05 }}
-                className="bg-gradient-to-br from-blue-500/20 to-blue-600/20 rounded-xl p-4"
-              >
+              <motion.div whileHover={{ scale: 1.05 }} className="bg-gradient-to-br from-blue-500/20 to-blue-600/20 rounded-xl p-4">
                 <div className="text-4xl font-bold text-blue-400">{formatTime(3600 - timeRemaining)}</div>
                 <div className="text-gray-400">⏱️ Total Time</div>
               </motion.div>
-              <motion.div
-                whileHover={{ scale: 1.05 }}
-                className="bg-gradient-to-br from-purple-500/20 to-purple-600/20 rounded-xl p-4"
-              >
+              <motion.div whileHover={{ scale: 1.05 }} className="bg-gradient-to-br from-purple-500/20 to-purple-600/20 rounded-xl p-4">
                 <div className="text-4xl font-bold text-purple-400">{hintsUsed}</div>
                 <div className="text-gray-400">💡 Hints Used</div>
               </motion.div>
-              <motion.div
-                whileHover={{ scale: 1.05 }}
-                className="bg-gradient-to-br from-green-500/20 to-green-600/20 rounded-xl p-4"
-              >
+              <motion.div whileHover={{ scale: 1.05 }} className="bg-gradient-to-br from-green-500/20 to-green-600/20 rounded-xl p-4">
                 <div className="text-4xl font-bold text-green-400">{stagesSolved.length}/{totalStages}</div>
                 <div className="text-gray-400">🎯 Stages Solved</div>
               </motion.div>
-              <motion.div
-                whileHover={{ scale: 1.05 }}
-                className="bg-gradient-to-br from-yellow-500/20 to-yellow-600/20 rounded-xl p-4"
-              >
+              <motion.div whileHover={{ scale: 1.05 }} className="bg-gradient-to-br from-yellow-500/20 to-yellow-600/20 rounded-xl p-4">
                 <div className="text-4xl font-bold text-yellow-400">{answersRevealed.length}</div>
                 <div className="text-gray-400">👁️ Answers Revealed</div>
               </motion.div>
@@ -476,13 +460,8 @@ const PlayerInterface = () => {
               <p className="text-green-200 text-lg mb-6">
                 Download your personalized certificate of completion to commemorate this amazing achievement!
               </p>
-              
-              <motion.div
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="flex justify-center"
-              >
-                <CertificateGenerator 
+              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="flex justify-center">
+                <CertificateGenerator
                   playerData={certificateData}
                   onDownload={() => {
                     announceToScreenReader(`🎉 SUCCESS! Certificate downloaded for Team ${teamName}! Congratulations on your victory!`);
@@ -496,7 +475,6 @@ const PlayerInterface = () => {
                   }}
                 />
               </motion.div>
-              
               <motion.p
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -709,7 +687,7 @@ const PlayerInterface = () => {
                   <Lightbulb className="w-4 h-4" />
                   Request Help
                 </button>
-                
+
                 {/* Answer Reveal Button */}
                 <button
                   onClick={() => setShowAnswerReveal(true)}
@@ -747,7 +725,7 @@ const PlayerInterface = () => {
                     </button>
                   )}
                 </div>
-                
+
                 <button
                   onClick={() => setShowEndGameModal(true)}
                   className="w-full px-4 py-2 bg-red-500/20 text-red-300 rounded-lg hover:bg-red-500/30 transition-colors focus:outline-none focus:ring-2 focus:ring-red-400 flex items-center justify-center gap-2"
@@ -756,7 +734,7 @@ const PlayerInterface = () => {
                   <XCircle className="w-4 h-4" />
                   End Investigation
                 </button>
-                
+
                 <button
                   onClick={handleHomeClick}
                   className="w-full px-4 py-2 bg-gray-500/20 text-gray-300 rounded-lg hover:bg-gray-500/30 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-400 flex items-center justify-center gap-2"
@@ -918,7 +896,8 @@ const PlayerInterface = () => {
                 </h3>
               </div>
               <p className="text-gray-300 mb-6">
-                Are you sure you want to exit the investigation and return to the home page? Team {teamName}'s current progress will be lost.
+                Are you sure you want to exit the investigation and return to the home page? 
+                Team {teamName}'s current progress will be lost.
               </p>
               <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4 mb-6">
                 <h4 className="font-semibold text-yellow-300 mb-2">Team {teamName} Progress:</h4>
@@ -977,7 +956,8 @@ const PlayerInterface = () => {
                 </h3>
               </div>
               <p className="text-gray-300 mb-6">
-                Are you sure you want to end Team {teamName}'s current investigation? You'll be returned to the home page.
+                Are you sure you want to end Team {teamName}'s current investigation? 
+                You'll be returned to the home page.
               </p>
               <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4 mb-6">
                 <h4 className="font-semibold text-yellow-300 mb-2">Team {teamName} Summary:</h4>
@@ -1038,7 +1018,6 @@ const getStageTitle = (stage, theme) => {
       6: 'Master of Magic'
     }
   };
-
   return stageTitles[theme]?.[stage] || 'Unknown Challenge';
 };
 
@@ -1055,7 +1034,6 @@ const getPerformanceRating = (data) => {
 
 const getPerformanceDescription = (data) => {
   const rating = getPerformanceRating(data);
-  
   const descriptions = {
     'LEGENDARY MASTER': '🏆 OUTSTANDING! You solved all puzzles with minimal assistance - truly legendary performance!',
     'EXCEPTIONAL DETECTIVE': '⭐ EXCELLENT! Your team demonstrated superior problem-solving skills and teamwork!',
@@ -1064,7 +1042,6 @@ const getPerformanceDescription = (data) => {
     'PROMISING PLAYER': '👏 NICE EFFORT! Your team made good progress and learned valuable skills!',
     'BRAVE PARTICIPANT': '🌟 THANK YOU! Every attempt builds experience and courage for future challenges!'
   };
-  
   return descriptions[rating] || '🎮 Thank you for playing and being part of this amazing adventure!';
 };
 

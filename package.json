@@ -23,7 +23,8 @@
     "lucide-react": "^0.263.1",
     "react-hotkeys-hook": "^4.4.1",
     "react-use": "^17.4.0",
-    "canvas-confetti": "^1.6.0"
+    "canvas-confetti": "^1.6.0",
+    "@supabase/supabase-js": "^2.39.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.9.1",
