@@ -24,6 +24,7 @@ const StageComponent = ({ stage, onSolved, audioEnabled, theme, canAdvance, isSt
       puzzle.description = customContent.description || puzzle.description;
       puzzle.backstory = customContent.backstory || puzzle.backstory;
     }
+
     setCurrentPuzzle(puzzle);
     setUserInput('');
     setAttempts(0);
@@ -180,7 +181,7 @@ const StageComponent = ({ stage, onSolved, audioEnabled, theme, canAdvance, isSt
             Solution: <code className="font-mono bg-slate-700 px-2 py-1 rounded">{currentPuzzle.solution}</code>
           </p>
         </div>
-
+        
         {/* Navigation for completed stages */}
         <div className="flex flex-col sm:flex-row gap-4 justify-center max-w-lg mx-auto">
           {stage > 1 && (
@@ -521,7 +522,7 @@ const EvidenceComponent = ({ evidence, audioEnabled, theme, onEvidenceReviewed, 
                           <p className="text-yellow-200">{item.clue}</p>
                         </div>
                       )}
-
+                      
                       {item.questions && Array.isArray(item.questions) && (
                         <div className="bg-purple-500/10 border border-purple-500/20 rounded p-3">
                           <h6 className="font-medium text-purple-300 mb-1">Questions to Consider:</h6>
@@ -641,19 +642,27 @@ const PuzzleInterface = ({ puzzle, userInput, setUserInput, onSubmit, theme, dis
 
 const getEvidenceTitle = (theme) => {
   switch (theme) {
-    case 'murder-mystery': return 'Crime Scene Evidence';
-    case 'haunted-mansion': return 'Paranormal Investigation';
-    case 'wizards-tower': return 'Magical Discoveries';
-    default: return 'Evidence';
+    case 'murder-mystery':
+      return 'Crime Scene Evidence';
+    case 'haunted-mansion':
+      return 'Paranormal Investigation';
+    case 'wizards-tower':
+      return 'Magical Discoveries';
+    default:
+      return 'Evidence';
   }
 };
 
 const getSubmitButtonText = (theme) => {
   switch (theme) {
-    case 'murder-mystery': return 'Present Evidence';
-    case 'haunted-mansion': return 'Perform Ritual';
-    case 'wizards-tower': return 'Cast Spell';
-    default: return 'Submit Answer';
+    case 'murder-mystery':
+      return 'Present Evidence';
+    case 'haunted-mansion':
+      return 'Perform Ritual';
+    case 'wizards-tower':
+      return 'Cast Spell';
+    default:
+      return 'Submit Answer';
   }
 };
 
