@@ -1,4 +1,4 @@
-import React, { Suspense } from 'react';
+import React from 'react';
 import { HashRouter as Router, Routes, Route } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import AccessibilityProvider from './providers/AccessibilityProvider';
@@ -7,7 +7,7 @@ import { AdminProvider } from './providers/AdminProvider';
 import { ContentProvider } from './providers/ContentProvider';
 import './App.css';
 
-// Import pages directly instead of lazy loading to fix initial load
+// Import pages directly
 import LandingPage from './pages/LandingPage';
 import SetupInterface from './pages/SetupInterface';
 import PlayerInterface from './pages/PlayerInterface';
@@ -43,7 +43,7 @@ function App() {
                   aria-atomic="true"
                   className="sr-only"
                 ></div>
-
+                
                 <Routes>
                   <Route path="/" element={<LandingPage />} />
                   <Route path="/setup" element={<SetupInterface />} />

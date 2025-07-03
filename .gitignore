@@ -23,9 +23,22 @@ dist-ssr
 *.sln
 *.sw?
 
+# Environment files
 .env
 .env.local
-.env.production
+.env.development.local
+.env.test.local
+.env.production.local
 
 # Netlify
 .netlify
+
+# Build artifacts
+build/
+*.tsbuildinfo
+
+# OS generated files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/

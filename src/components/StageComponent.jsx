@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CheckCircle, Play, Pause, Volume2, Image, FileText, Search, Skull, Wand2, Eye, Camera, Book, Lock, ArrowLeft, ArrowRight, AlertTriangle, Microscope, MapPin, Clock as ClockIcon, Users as UsersIcon, Fingerprint, Flask, FileSearch, MessageCircle } from 'lucide-react';
+import { CheckCircle, Play, Pause, Volume2, Image, FileText, Search, Skull, Wand2, Eye, Camera, Book, Lock, ArrowLeft, ArrowRight, AlertTriangle, Microscope, MapPin, Clock as ClockIcon, Users as UsersIcon, Fingerprint, TestTube, FileSearch, MessageCircle } from 'lucide-react';
 import { useAccessibility } from '../providers/AccessibilityProvider';
 import { useContent } from '../providers/ContentProvider';
 
@@ -409,7 +409,7 @@ const EvidenceComponent = ({ evidence, audioEnabled, theme, onEvidenceReviewed, 
   const getEvidenceIcon = (evidenceType) => {
     const iconMap = {
       'physical': <Fingerprint className="w-5 h-5 text-red-400" />,
-      'chemical': <Flask className="w-5 h-5 text-blue-400" />,
+      'chemical': <TestTube className="w-5 h-5 text-blue-400" />,
       'document': <FileSearch className="w-5 h-5 text-yellow-400" />,
       'location': <MapPin className="w-5 h-5 text-green-400" />,
       'temporal': <ClockIcon className="w-5 h-5 text-purple-400" />,
@@ -801,7 +801,7 @@ const getPuzzleForStage = (stage, theme) => {
           },
           {
             value: "robert-sterling",
-            label: "Robert Sterling", 
+            label: "Robert Sterling",
             description: "Business partner present during time of death"
           },
           {
