@@ -7,8 +7,9 @@ A professional, fully accessible digital escape room experience with real-time c
 [![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/your-username/digital-escape-room-platform)
 
 ### Manual Deployment:
+
 1. **Fork this repository**
-2. **Connect to Netlify**: 
+2. **Connect to Netlify**:
    - Go to [netlify.com](https://netlify.com)
    - Click "New site from Git"
    - Select your forked repository
